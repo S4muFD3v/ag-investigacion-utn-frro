@@ -5,10 +5,10 @@
 build/
 
 CMakeCache.txt
+*.cmake
+CMakeFiles/
 
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
 *.sln
-
-*.cmake
