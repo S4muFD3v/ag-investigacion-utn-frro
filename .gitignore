@@ -1,0 +1,14 @@
+.git/
+.vs/
+.vscode/
+
+build/
+
+CMakeCache.txt
+
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+
+*.cmake
