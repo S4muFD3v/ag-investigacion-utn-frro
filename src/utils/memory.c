@@ -1,0 +1,52 @@
+#include "memory.h"
+#include <stdlib.h>
+#include <string.h>
+
+struct dynarr_t {
+    void* ptr;
+    size_t capacity;
+    size_t size;
+    size_t elementSize;
+};
+
+dynarr_t* init_dynamic_array(size_t elementSize, size_t reserveCapacity) {
+    size_t capacityBytes = elementSize * reserveCapacity;
+    dynarr_t* dynarrObject = malloc(sizeof(dynarr_t));
+    dynarrObject->ptr = malloc(capacityBytes);
+    dynarrObject->capacity = reserveCapacity;
+    dynarrObject->size = 0;
+    dynarrObject->elementSize = elementSize;
+    return dynarrObject;
+}
+
+void free_dynamic_array(dynarr_t* array) {
+    free(array->ptr);
+    free(array);
+}
+
+eptr_t push_slot(dynarr_t* array) {
+    size_t newSize = array->size + 1;
+    eptr_t eptr = NULL;
+    if(newSize < array->capacity) {
+        array->size = newSize;
+        eptr = array->ptr + ((newSize -1) * array->elementSize);
+    } else {
+        //Realloc
+        size_t newCapacity = array->capacity * 1.5;
+        size_t newCapacityBytes = newCapacity * array->elementSize;
+        size_t copySize = array->elementSize * array->size;
+        void* newPtr = malloc(newCapacityBytes);
+        errno_t status = memcpy_s(newPtr, copySize, array->ptr, copySize);
+        if(status != 0) abort();
+        free(array->ptr);
+        array->ptr = newPtr;
+        array->capacity = newCapacity;
+        array->size = newSize;
+        eptr = array->ptr + ((newSize -1) * array->elementSize);
+    }
+    return eptr;
+}
+
+eptr_t at(dynarr_t* array, size_t position) {
+    return array->ptr + (position * array->elementSize);
+}
