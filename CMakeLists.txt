@@ -9,8 +9,8 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "Multithreaded$<$<CONFIG:Release>:Release>")
 
 
 file (GLOB sources
-    "${CMAKE_SOURCE_DIR}/*.c"
-    "${CMAKE_SOURCE_DIR}/*.h"
+    "${CMAKE_SOURCE_DIR}/src/*.c"
+    "${CMAKE_SOURCE_DIR}/src/*.h"
 )
 
 add_executable( App
