@@ -12,3 +12,4 @@ CMakeFiles/
 *.vcxproj.filters
 *.vcxproj.user
 *.sln
+Makefile
