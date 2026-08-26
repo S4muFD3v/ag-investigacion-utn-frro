@@ -5,22 +5,9 @@ include(FetchContent)
 
 if(CMAKE_HOST_WIN32)
     set(DEPS_XLSXIO_URL "https://github.com/brechtsanders/xlsxio.git")
-    set(DEPS_ZLIB_URL "https://github.com/madler/zlib.git")
 elseif(CMAKE_HOST_LINUX)
     set(DEPS_XLSXIO_URL "git@github.com:brechtsanders/xlsxio.git")
-    set(DEPS_ZLIB_URL "git@github.com:madler/zlib.git")
 endif()
-
-
-message("Downloading zlib...")
-
-FetchContent_Declare(
-    zlib
-    GIT_REPOSITORY ${DEPS_ZLIB_URL}
-    GIT_TAG        0.2.36
-)
-
-FetchContent_MakeAvailable(zlib)
 
 message("Downloading xlsxio...")
 FetchContent_Declare(
