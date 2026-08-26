@@ -13,3 +13,5 @@ CMakeFiles/
 *.vcxproj.user
 *.sln
 Makefile
+
+_deps/
