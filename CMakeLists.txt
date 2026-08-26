@@ -4,21 +4,30 @@ project(AgInvestigacion)
 include(FetchContent)
 
 if(CMAKE_HOST_WIN32)
-    message("Cloning xlsxio with https")
-    FetchContent_Declare(
-        xlsxio
-        GIT_REPOSITORY https://github.com/brechtsanders/xlsxio.git
-        GIT_TAG        0.2.36
-    )
+    set(DEPS_XLSXIO_URL "https://github.com/brechtsanders/xlsxio.git")
+    set(DEPS_ZLIB_URL "https://github.com/madler/zlib.git")
 elseif(CMAKE_HOST_LINUX)
-    message("Cloning xlsxio with ssh")
-    FetchContent_Declare(
-        xlsxio
-        GIT_REPOSITORY git@github.com:brechtsanders/xlsxio.git
-        GIT_TAG        0.2.36
-    )
+    set(DEPS_XLSXIO_URL "git@github.com:brechtsanders/xlsxio.git")
+    set(DEPS_ZLIB_URL "git@github.com:madler/zlib.git")
 endif()
 
+
+message("Downloading zlib...")
+
+FetchContent_Declare(
+    zlib
+    GIT_REPOSITORY ${DEPS_ZLIB_URL}
+    GIT_TAG        0.2.36
+)
+
+FetchContent_MakeAvailable(zlib)
+
+message("Downloading xlsxio...")
+FetchContent_Declare(
+    xlsxio
+    GIT_REPOSITORY ${DEPS_XLSXIO_URL}
+    GIT_TAG        0.2.36
+)
 
 set(BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -26,6 +35,7 @@ set(WITH_LIBZIP ON CACHE BOOL "" FORCE)
 set(WITH_MINIZIP_NG OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(xlsxio)
+
 
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
