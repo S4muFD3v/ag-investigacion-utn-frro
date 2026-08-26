@@ -7,13 +7,13 @@
 #define TEACHER_NAME_MAX_LENGTH 256
 
 typedef long long int id_t;
-typedef subject_t subject_t;
-typedef comission_t comission_t;
-typedef block_t block_t;
-typedef teacher_t teacher_t;
-typedef dictation_t dictation_t;
-typedef com_subjects_t com_subjects_t;
-typedef session_t session_t;
+typedef struct subject_t subject_t;
+typedef struct comission_t comission_t;
+typedef struct block_t block_t;
+typedef struct teacher_t teacher_t;
+typedef struct dictation_t dictation_t;
+typedef struct com_subjects_t com_subjects_t;
+typedef struct session_t session_t;
 
 #define SCHEDULE_MORNING 0x0000000000000001
 #define SCHEDULE_AFTERNOON 0x0000000000000002

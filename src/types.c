@@ -54,17 +54,27 @@ struct session_t {
     size_t length;
 };
 
+id_t get_subject_id(subject_t* subject) {
+    return subject->id;
+}
+
+void set_subject_id(subject_t* subject, id_t id) {
+    subject->id = id;
+}
+
 char* get_subject_name(subject_t* subject) {
     return subject->name;
 }
 
-size_t get_subject_weekly_hours(subject_t* subject) {
-    return subject->weeklyHours;
+void set_subject_name(subject_t* subject, char* name) {
+    if (name == NULL) abort();
+
+    strncpy(subject->name, name, SUBJECT_NAME_MAX_LENGTH - 1);
+    subject->name[SUBJECT_NAME_MAX_LENGTH - 1] = '\0';
 }
 
-void set_subject_name(subject_t* subject, char* name) {
-    errno_t status = strcpy_s(subject->name, SUBJECT_NAME_MAX_LENGTH, name);
-    if(status != 0) abort();
+size_t get_subject_weekly_hours(subject_t* subject) {
+    return subject->weeklyHours;
 }
 
 void set_subject_weekly_hours(subject_t* subject, size_t weeklyHours) {
@@ -75,3 +85,205 @@ size_t sizeof_subject() {
     return sizeof(subject_t);
 }
 
+id_t get_com_subject_id(com_subjects_t* comSubject) {
+    return comSubject->subjectId;
+}
+
+void set_com_subject_id(com_subjects_t* comSubject, id_t subjectId) {
+    comSubject->subjectId = subjectId;
+}
+
+fmp_t get_com_subject_q(com_subjects_t* comSubject) {
+    return comSubject->q;
+}
+
+void set_com_subject_q(com_subjects_t* comSubject, fmp_t q) {
+    comSubject->q = q;
+}
+
+size_t sizeof_com_subject() {
+    return sizeof(com_subjects_t);
+}
+
+id_t get_comission_id(comission_t* comission) {
+    return comission->id;
+}
+
+void set_comission_id(comission_t* comission, id_t id) {
+    comission->id = id;
+}
+
+size_t get_comission_year(comission_t* comission) {
+    return comission->year;
+}
+
+void set_comission_year(comission_t* comission, size_t year) {
+    comission->year = year;
+}
+
+schedule_t get_comission_schedule(comission_t* comission) {
+    return comission->schedule;
+}
+
+void set_comission_schedule(comission_t* comission, schedule_t schedule) {
+    comission->schedule = schedule;
+}
+
+com_subjects_t* get_comission_subjects(comission_t* comission) {
+    return comission->subjects;
+}
+
+void set_comission_subjects(comission_t* comission, com_subjects_t* subjects) {
+    comission->subjects = subjects;
+}
+
+size_t get_comission_length(comission_t* comission) {
+    return comission->length;
+}
+
+void set_comission_length(comission_t* comission, size_t length) {
+    comission->length = length;
+}
+
+size_t sizeof_comission() {
+    return sizeof(comission_t);
+}
+
+id_t get_teacher_id(teacher_t* teacher) {
+    return teacher->id;
+}
+
+void set_teacher_id(teacher_t* teacher, id_t id) {
+    teacher->id = id;
+}
+
+char* get_teacher_name(teacher_t* teacher) {
+    return teacher->name;
+}
+
+void set_teacher_name(teacher_t* teacher, char* name) {
+    if (name == NULL) abort();
+
+    strncpy(teacher->name, name, TEACHER_NAME_MAX_LENGTH - 1);
+    teacher->name[TEACHER_NAME_MAX_LENGTH - 1] = '\0';
+}
+
+size_t sizeof_teacher() {
+    return sizeof(teacher_t);
+}
+
+id_t get_dictation_id(dictation_t* dictation) {
+    return dictation->id;
+}
+
+void set_dictation_id(dictation_t* dictation, id_t id) {
+    dictation->id = id;
+}
+
+id_t get_dictation_subject_id(dictation_t* dictation) {
+    return dictation->subjectId;
+}
+
+void set_dictation_subject_id(dictation_t* dictation, id_t subjectId) {
+    dictation->subjectId = subjectId;
+}
+
+id_t get_dictation_comission_id(dictation_t* dictation) {
+    return dictation->comissionId;
+}
+
+void set_dictation_comission_id(dictation_t* dictation, id_t comissionId) {
+    dictation->comissionId = comissionId;
+}
+
+id_t get_dictation_teacher_id(dictation_t* dictation) {
+    return dictation->teacherId;
+}
+
+void set_dictation_teacher_id(dictation_t* dictation, id_t teacherId) {
+    dictation->teacherId = teacherId;
+}
+
+size_t sizeof_dictation() {
+    return sizeof(dictation_t);
+}
+
+id_t get_block_id(block_t* block) {
+    return block->id;
+}
+
+void set_block_id(block_t* block, id_t id) {
+    block->id = id;
+}
+
+size_t get_block_start_minutes(block_t* block) {
+    return block->startMinutes;
+}
+
+void set_block_start_minutes(block_t* block, size_t startMinutes) {
+    block->startMinutes = startMinutes;
+}
+
+size_t get_block_end_minutes(block_t* block) {
+    return block->endMinutes;
+}
+
+void set_block_end_minutes(block_t* block, size_t endMinutes) {
+    block->endMinutes = endMinutes;
+}
+
+schedule_t get_block_schedules(block_t* block) {
+    return block->schedules;
+}
+
+void set_block_schedules(block_t* block, schedule_t schedules) {
+    block->schedules = schedules;
+}
+
+size_t sizeof_block() {
+    return sizeof(block_t);
+}
+
+id_t get_session_id(session_t* session) {
+    return session->id;
+}
+
+void set_session_id(session_t* session, id_t id) {
+    session->id = id;
+}
+
+id_t get_session_dictation_id(session_t* session) {
+    return session->dictationId;
+}
+
+void set_session_dictation_id(session_t* session, id_t dictationId) {
+    session->dictationId = dictationId;
+}
+
+size_t get_session_day(session_t* session) {
+    return session->day;
+}
+
+void set_session_day(session_t* session, size_t day) {
+    session->day = day;
+}
+
+id_t get_session_start_block_id(session_t* session) {
+    return session->startBlockId;
+}
+
+void set_session_start_block_id(session_t* session, id_t startBlockId) {
+    session->startBlockId = startBlockId;
+}
+
+size_t get_session_length(session_t* session) {
+    return session->length;
+}
+
+void set_session_length(session_t* session, size_t length) {
+    session->length = length;
+}
+
+size_t sizeof_session() {
+    return sizeof(session_t);
+}

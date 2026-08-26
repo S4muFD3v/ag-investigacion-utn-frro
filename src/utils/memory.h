@@ -2,7 +2,7 @@
 #define _MEMORY_H_
 
 
-typedef dynarr_t dynarr_t;
+typedef struct dynarr_t dynarr_t;
 typedef void* eptr_t;
 
 dynarr_t* init_dynamic_array(size_t elementSize, size_t reserveCapacity);
