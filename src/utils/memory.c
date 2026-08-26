@@ -29,23 +29,28 @@ eptr_t push_slot(dynarr_t* array) {
     eptr_t eptr = NULL;
     if(newSize <= array->capacity) { //aca no tendria que ser <= ? vos habias puesto <, por eso pregunto
         array->size = newSize;
-        eptr = (eptr_t)((char*)array->ptr) + ((newSize -1) * array->elementSize); //segun entiendo estas devolviendo la ultima direccion de memoria 
+        eptr = (eptr_t)((char*)array->ptr + ((newSize - 1) * array->elementSize)); // devuelve la direccion del nuevo elemento
     } else {
         //Realloc
         size_t newCapacity = array->capacity * 1.5;
         size_t newCapacityBytes = newCapacity * array->elementSize;
         size_t copySize = array->elementSize * array->size;
         void* newPtr = malloc(newCapacityBytes);
-        if(memcpy_s(newPtr, copySize, array->ptr, copySize) != 0) abort();
+        if (newPtr == NULL) return NULL;
+        memcpy(newPtr, array->ptr, copySize);
         free(array->ptr);
         array->ptr = newPtr;
         array->capacity = newCapacity;
         array->size = newSize;
-        eptr = (eptr_t)((char*)array->ptr) + ((newSize -1) * array->elementSize);
+        eptr = (eptr_t)((char*)array->ptr + ((newSize - 1) * array->elementSize));
     }
     return eptr;
 }
 
 eptr_t at(dynarr_t* array, size_t position) {
-    return (eptr_t)((char*)array->ptr) + (position * array->elementSize);
+    return (eptr_t)((char*)array->ptr + (position * array->elementSize));
+}
+
+size_t dynamic_array_size(dynarr_t* array) {
+    return array->size;
 }

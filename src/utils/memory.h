@@ -1,6 +1,7 @@
 #ifndef _MEMORY_H_
 #define _MEMORY_H_
 
+#include <stddef.h>
 
 typedef struct dynarr_t dynarr_t;
 typedef void* eptr_t;
@@ -11,6 +12,8 @@ void free_dynamic_array(dynarr_t* array);
 
 eptr_t push_slot(dynarr_t* array);
 eptr_t at(dynarr_t* array, size_t position);
+
+size_t dynamic_array_size(dynarr_t* array);
 
 
 
