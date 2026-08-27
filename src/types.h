@@ -14,17 +14,19 @@ typedef struct teacher_t teacher_t;
 typedef struct dictation_t dictation_t;
 typedef struct com_subjects_t com_subjects_t;
 
-#define SCHEDULE_MORNING 0x0000000000000001
-#define SCHEDULE_AFTERNOON 0x0000000000000002
-#define SCHEDULE_EVENING 0x0000000000000004
-#define SCHEDULE_MAX_ENUM 0xfffffffffffffff8
-typedef long long int schedule_t;
+typedef enum {
+    SCHEDULE_MORNING = 0x0000000000000001,
+    SCHEDULE_AFTERNOON = 0x0000000000000002,
+    SCHEDULE_EVENING = 0x0000000000000004,
+    SCHEDULE_MAX_ENUM = 0xfffffffffffffff8
+} schedule_t;
 
-#define FMP_FIRST 0x0000000000000001
-#define FMP_SECOND 0x0000000000000002
-#define FMP_BOTH 0x0000000000000004
-#define FMP_MAX_ENUM 0xfffffffffffffff8
-typedef char fmp_t;
+typedef enum { 
+    FMP_FIRST = 0x0000000000000001,
+    FMP_SECOND = 0x0000000000000002,
+    FMP_BOTH = 0x0000000000000004,
+    FMP_MAX_ENUM = 0xfffffffffffffff8
+} fmp_t;
 
 /* SUBJECT */
 
