@@ -100,3 +100,4 @@ size_t get_gene_length(const gene_t* gene) {
 void set_gene_length(gene_t* gene, size_t length) {
     gene->length = length;
 }
+
