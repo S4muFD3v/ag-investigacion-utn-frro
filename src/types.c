@@ -44,16 +44,6 @@ struct block_t {
     //schedules = SCHEDULE_MORNING | SCHEDULE_AFTERNOON y si es uno normal seria schedules = SCHEDULE_MORNING
 };
 
-struct session_t {
-    id_t id;
-
-    id_t dictationId;
-
-    size_t day;
-    id_t startBlockId;
-    size_t length;
-};
-
 id_t get_subject_id(subject_t* subject) {
     return subject->id;
 }
@@ -242,48 +232,4 @@ void set_block_schedules(block_t* block, schedule_t schedules) {
 
 size_t sizeof_block() {
     return sizeof(block_t);
-}
-
-id_t get_session_id(session_t* session) {
-    return session->id;
-}
-
-void set_session_id(session_t* session, id_t id) {
-    session->id = id;
-}
-
-id_t get_session_dictation_id(session_t* session) {
-    return session->dictationId;
-}
-
-void set_session_dictation_id(session_t* session, id_t dictationId) {
-    session->dictationId = dictationId;
-}
-
-size_t get_session_day(session_t* session) {
-    return session->day;
-}
-
-void set_session_day(session_t* session, size_t day) {
-    session->day = day;
-}
-
-id_t get_session_start_block_id(session_t* session) {
-    return session->startBlockId;
-}
-
-void set_session_start_block_id(session_t* session, id_t startBlockId) {
-    session->startBlockId = startBlockId;
-}
-
-size_t get_session_length(session_t* session) {
-    return session->length;
-}
-
-void set_session_length(session_t* session, size_t length) {
-    session->length = length;
-}
-
-size_t sizeof_session() {
-    return sizeof(session_t);
 }

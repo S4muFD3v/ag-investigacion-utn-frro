@@ -31,9 +31,4 @@ block_t* query_block(id_t blockId);
 block_t* get_block_at(size_t position);
 size_t get_block_count(void);
 
-session_t* create_session(void);
-session_t* query_session(id_t sessionId);
-session_t* get_session_at(size_t position);
-size_t get_session_count(void);
-
 #endif

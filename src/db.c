@@ -10,7 +10,6 @@ struct dbdata_t {
     dynarr_t* teachers;
     dynarr_t* dictations;
     dynarr_t* blocks;
-    dynarr_t* sessions;
 } dbdata;
 
 
@@ -21,7 +20,6 @@ void init_db() {
     dbdata.teachers = init_dynamic_array(sizeof_teacher(), 32);
     dbdata.dictations = init_dynamic_array(sizeof_dictation(), 32);
     dbdata.blocks = init_dynamic_array(sizeof_block(), 32);
-    dbdata.sessions = init_dynamic_array(sizeof_session(), 32);
 }
 
 void terminate_db() {
@@ -30,7 +28,6 @@ void terminate_db() {
     free_dynamic_array(dbdata.teachers);
     free_dynamic_array(dbdata.dictations);
     free_dynamic_array(dbdata.blocks);
-    free_dynamic_array(dbdata.sessions);
 }
 
 
@@ -42,7 +39,7 @@ subject_t* create_subject() {
     return subject;
 }
 
-subject_t* query_subject(id_t subjectId) {
+subject_t* query_subject(id_t subjectId) {              //probablemente una futura optimizacion venga de poner id's autoincrementales para que esta busqueda sea directa
     for (size_t i = 0; i < get_subject_count(); i++) {
         subject_t* subject = get_subject_at(i);
         if (get_subject_id(subject) == subjectId) {
@@ -177,33 +174,4 @@ block_t* get_block_at(size_t position) {
 
 size_t get_block_count() {
     return dynamic_array_size(dbdata.blocks);
-}
-
-session_t* create_session() {
-    session_t* session = push_slot(dbdata.sessions);
-    if (session != NULL) {
-        memset(session, 0, sizeof_session());
-    }
-    return session;
-}
-
-session_t* query_session(id_t sessionId) {
-    for (size_t i = 0; i < get_session_count(); i++) {
-        session_t* session = get_session_at(i);
-        if (get_session_id(session) == sessionId) {
-            return session;
-        }
-    }
-    return NULL;
-}
-
-session_t* get_session_at(size_t position) {
-    if (position >= get_session_count()) {
-        return NULL;
-    }
-    return (session_t*)at(dbdata.sessions, position);
-}
-
-size_t get_session_count() {
-    return dynamic_array_size(dbdata.sessions);
 }

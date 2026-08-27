@@ -13,7 +13,6 @@ typedef struct block_t block_t;
 typedef struct teacher_t teacher_t;
 typedef struct dictation_t dictation_t;
 typedef struct com_subjects_t com_subjects_t;
-typedef struct session_t session_t;
 
 #define SCHEDULE_MORNING 0x0000000000000001
 #define SCHEDULE_AFTERNOON 0x0000000000000002
@@ -115,26 +114,5 @@ schedule_t get_block_schedules(block_t* block);
 void set_block_schedules(block_t* block, schedule_t schedules);
 
 size_t sizeof_block();
-
-
-/* SESSION */
-
-id_t get_session_id(session_t* session);
-void set_session_id(session_t* session, id_t id);
-
-id_t get_session_dictation_id(session_t* session);
-void set_session_dictation_id(session_t* session, id_t dictationId);
-
-size_t get_session_day(session_t* session);
-void set_session_day(session_t* session, size_t day);
-
-id_t get_session_start_block_id(session_t* session);
-void set_session_start_block_id(session_t* session, id_t startBlockId);
-
-size_t get_session_length(session_t* session);
-void set_session_length(session_t* session, size_t length);
-
-size_t sizeof_session();
-
 
 #endif

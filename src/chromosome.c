@@ -1,11 +1,10 @@
 #include "chromosome.h"
 #include <stdlib.h>
 #include <math.h>
-#include "db.h"
 
 struct gene_t {
 
-    id_t sessionId;
+    id_t dictationId;
 
     size_t day;
     id_t startBlockId;
@@ -47,63 +46,57 @@ void free_chromosome(chromosome_t* chromosome) {
     free(chromosome);
 }
 
-constraint_result_t validate_hard_constraints (chromosome_t* chromosome){
-    
-    constraint_result_t result;
-    
-    result = validate_r1(chromosome);
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r2(chromosome);
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r4(chromosome);
-
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r9(chromosome);
-
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r10(chromosome);
-
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r11(chromosome);
-
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
-
-    result = validate_r13(chromosome);
-
-    if (result != CONSTRAINT_OK){
-        return result;
-    }
+size_t get_chromosome_gene_count(const chromosome_t* chromosome) {
+    return chromosome->geneCount;
 }
 
-constraint_result_t validate_r1(chromosome_t* chromosome){
-    for (size_t i=0; i<= chromosome->geneCount; i++){
-        session_t* session = query_session(chromosome->genes[i].sessionId);
-
-        dictation_t* dictation = query_dictation(get_session_dictation_id(session));
-
-        comission_t* comission = query_comission(get_dictation_comission_id(dictation));
-
-        id_t comissionId = get_comission_id(comission);
-
-        
-
+gene_t* get_gene_at(chromosome_t* chromosome, size_t position) {
+    if (position >= chromosome->geneCount) {
+        return NULL;
     }
+    return chromosome->genes + position;
 }
 
+double get_chromosome_fitness(const chromosome_t* chromosome) {
+    return chromosome->fitness;
+}
+
+void set_chromosome_fitness(chromosome_t* chromosome, double fitness) {
+    chromosome->fitness = fitness;
+}
+
+void init_gene(gene_t* gene, id_t dictationId, size_t day,
+               id_t startBlockId, size_t length) {
+    gene->dictationId = dictationId;
+    gene->day = day;
+    gene->startBlockId = startBlockId;
+    gene->length = length;
+}
+
+id_t get_gene_dictation_id(const gene_t* gene) {
+    return gene->dictationId;
+}
+
+size_t get_gene_day(const gene_t* gene) {
+    return gene->day;
+}
+
+void set_gene_day(gene_t* gene, size_t day) {
+    gene->day = day;
+}
+
+id_t get_gene_start_block_id(const gene_t* gene) {
+    return gene->startBlockId;
+}
+
+void set_gene_start_block_id(gene_t* gene, id_t startBlockId) {
+    gene->startBlockId = startBlockId;
+}
+
+size_t get_gene_length(const gene_t* gene) {
+    return gene->length;
+}
+
+void set_gene_length(gene_t* gene, size_t length) {
+    gene->length = length;
+}
