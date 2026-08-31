@@ -1,8 +1,9 @@
 #ifndef _SCHEDULE_LOADER_H_
 #define _SCHEDULE_LOADER_H_
 
+#include <stddef.h>
+
 typedef struct schedule_data_t schedule_data_t;
-typedef unsigned long long int size_t;
 typedef void* schedule_file_t;
 typedef struct com_id_t com_id_t;
 
