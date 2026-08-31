@@ -9,6 +9,8 @@ void terminate_db(void);
 subject_t* create_subject(void);
 subject_t* query_subject(id_t subjectId);
 subject_t* get_subject_at(size_t position);
+subject_t* add_subject(id_t id, const char* name, size_t weeklyBlocks);
+subject_t* get_subjects(void);
 size_t get_subject_count(void);
 
 comission_t* create_comission(void);
