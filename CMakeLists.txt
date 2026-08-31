@@ -34,6 +34,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/src/*.c"
+    "${CMAKE_SOURCE_DIR}/src/*.h"
 )
 
 add_executable(App ${sources})
