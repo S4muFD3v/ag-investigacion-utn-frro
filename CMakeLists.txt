@@ -40,6 +40,8 @@ add_executable(App ${sources})
 
 target_include_directories(App PRIVATE
     "${xlsxio_SOURCE_DIR}/include"
+    "${xlsxio_SOURCE_DIR}/lib"
+    "${xlsxio_SOURCE_DIR}"
 )
 
 target_link_libraries(App PRIVATE
