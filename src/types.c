@@ -56,7 +56,7 @@ char* get_subject_name(subject_t* subject) {
     return subject->name;
 }
 
-void set_subject_name(subject_t* subject, char* name) {
+void set_subject_name(subject_t* subject, const char* name) {
     if (name == NULL) abort();
 
     strncpy(subject->name, name, SUBJECT_NAME_MAX_LENGTH - 1);

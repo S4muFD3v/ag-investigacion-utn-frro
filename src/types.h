@@ -34,7 +34,7 @@ id_t get_subject_id(subject_t* subject);
 void set_subject_id(subject_t* subject, id_t id);
 
 char* get_subject_name(subject_t* subject);
-void set_subject_name(subject_t* subject, char* name);
+void set_subject_name(subject_t* subject, const char* name);
 
 size_t get_subject_weekly_hours(subject_t* subject);
 void set_subject_weekly_hours(subject_t* subject, size_t weeklyHours);

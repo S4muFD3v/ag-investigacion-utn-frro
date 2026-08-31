@@ -56,6 +56,24 @@ subject_t* get_subject_at(size_t position) {
     return (subject_t*)at(dbdata.subjects, position);
 }
 
+subject_t* add_subject(id_t id, const char *name, size_t weeklyBlocks) {
+    subject_t *subject = create_subject();
+
+    if (subject == NULL) {
+        return NULL;
+    }
+
+    set_subject_id(subject, id);
+    set_subject_name(subject, name);
+    set_subject_weekly_hours(subject, weeklyBlocks);
+
+    return subject;
+}
+
+subject_t* get_subjects(void) {
+    return get_subject_at(0);
+}
+
 size_t get_subject_count() {
     return dynamic_array_size(dbdata.subjects);
 }

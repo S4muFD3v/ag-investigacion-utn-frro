@@ -19,6 +19,8 @@ typedef struct chromosome_t chromosome_t;
 typedef struct gene_t gene_t;
 
 chromosome_t* init_chromosome (size_t geneCount);
+chromosome_t* clone_chromosome(const chromosome_t* source);
+void sort_chromosome_by_dictation(chromosome_t* chromosome);
 void free_chromosome(chromosome_t* chromosome);
 
 size_t get_chromosome_gene_count(const chromosome_t* chromosome);
@@ -40,6 +42,9 @@ void set_gene_start_block_id(gene_t* gene, id_t startBlockId);
 
 size_t get_gene_length(const gene_t* gene);
 void set_gene_length(gene_t* gene, size_t length);
+
+size_t get_sizeof_genes(void);
+gene_t* get_genes(chromosome_t* chromosome);
 
 
 #endif
