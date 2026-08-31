@@ -14,7 +14,10 @@ eptr_t push_slot(dynarr_t* array);
 eptr_t at(dynarr_t* array, size_t position);
 
 size_t dynamic_array_size(dynarr_t* array);
+size_t dynamic_array_capacity(dynarr_t* array);
 
+
+void dynamic_array_copy_to(void* dest, size_t destSizeBytes, dynarr_t* array);
 
 
 #endif

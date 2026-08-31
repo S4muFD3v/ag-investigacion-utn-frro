@@ -29,7 +29,6 @@ eptr_t push_slot(dynarr_t* array) {
     eptr_t eptr = NULL;
     if(newSize <= array->capacity) { //aca no tendria que ser <= ? vos habias puesto <, por eso pregunto
         array->size = newSize;
-        eptr = (eptr_t)((char*)array->ptr + ((newSize - 1) * array->elementSize)); // devuelve la direccion del nuevo elemento
     } else {
         //Realloc
         size_t newCapacity = array->capacity * 1.5;
@@ -42,9 +41,8 @@ eptr_t push_slot(dynarr_t* array) {
         array->ptr = newPtr;
         array->capacity = newCapacity;
         array->size = newSize;
-        eptr = (eptr_t)((char*)array->ptr + ((newSize - 1) * array->elementSize));
     }
-    return eptr;
+    return at(array, newSize-1);
 }
 
 eptr_t at(dynarr_t* array, size_t position) {
@@ -53,4 +51,12 @@ eptr_t at(dynarr_t* array, size_t position) {
 
 size_t dynamic_array_size(dynarr_t* array) {
     return array->size;
+}
+
+size_t dynamic_array_capacity(dynarr_t* array) {
+    return array->capacity;
+}
+
+void dynamic_array_copy_to(void* dest, size_t destSizeBytes, dynarr_t* array) {
+    memcpy_s(dest, destSizeBytes, array->ptr, array->size * array->elementSize);
 }
