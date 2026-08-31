@@ -1,6 +1,8 @@
 #ifndef _SCHEDULE_LOADER_H_
 #define _SCHEDULE_LOADER_H_
 
+#include <stddef.h>
+
 typedef void* schedule_file_t;
 typedef size_t com_id_t;
 

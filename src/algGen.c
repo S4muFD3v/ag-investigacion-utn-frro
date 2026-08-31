@@ -12,52 +12,73 @@ static gene_t* gene_at(gene_t* firstGene, size_t geneSize, size_t position) {
     return (gene_t*)((char*)firstGene + geneSize * position);
 }
 
-static int randomize_dictation(gene_t* firstGene, size_t geneSize, size_t firstPosition, size_t sessionCount, size_t weeklyBlocks) {
-    if (sessionCount == 0 || weeklyBlocks > sessionCount * BLOCK_COUNT) {
+static int randomize_dictation(gene_t* firstGene, size_t geneSize, size_t firstPosition, size_t potentialSessionCount, size_t weeklyBlocks) {
+    if (potentialSessionCount == 0) {
         return 0;
     }
 
-    for (size_t i = 0; i < sessionCount; i++) {
+    for (size_t i = 0; i < potentialSessionCount; i++) {
         gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
         set_gene_day(gene, 0);
         set_gene_start_block_id(gene, 0);
         set_gene_length(gene, 0);
     }
 
-    for (size_t block = 0; block < weeklyBlocks; block++) {
-        size_t sessionPosition = (size_t)rand() % sessionCount;
-        size_t checkedSessions = 0;
-        gene_t* gene = gene_at(firstGene, geneSize,
-                               firstPosition + sessionPosition);
-
-        while (get_gene_length(gene) == BLOCK_COUNT &&
-               checkedSessions < sessionCount) {
-            sessionPosition = (sessionPosition + 1) % sessionCount;
-            checkedSessions++;
-            gene = gene_at(firstGene, geneSize,
-                           firstPosition + sessionPosition);
-        }
-
-        if (checkedSessions == sessionCount) {
-            return 0;
-        }
-
-        set_gene_length(gene, get_gene_length(gene) + 1);
+    if (weeklyBlocks == 0) {
+        return 1;
     }
 
-    for (size_t i = 0; i < sessionCount; i++) {
-        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
-        size_t length = get_gene_length(gene);
+    size_t maxActiveSessions = potentialSessionCount;
+    if (maxActiveSessions > DAY_COUNT) {
+        maxActiveSessions = DAY_COUNT;
+    }
+    if (maxActiveSessions > weeklyBlocks) {
+        maxActiveSessions = weeklyBlocks;
+    }
 
-        if (length == 0) {
+    size_t minActiveSessions =
+        (weeklyBlocks + BLOCK_COUNT - 1) / BLOCK_COUNT;
+
+
+    size_t activeSessionCount = minActiveSessions +
+        (size_t)rand() % (maxActiveSessions - minActiveSessions + 1);
+
+    for (size_t i = 0; i < activeSessionCount; i++) {
+        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
+        set_gene_length(gene, 1);
+    }
+
+    size_t remainingBlocks = weeklyBlocks - activeSessionCount;
+    while (remainingBlocks > 0) {
+        size_t sessionPosition = (size_t)rand() % activeSessionCount;
+        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + sessionPosition);
+
+        if (get_gene_length(gene) == BLOCK_COUNT) {
             continue;
         }
 
-        set_gene_day(gene, (size_t)rand() % DAY_COUNT);
-        set_gene_start_block_id(
-            gene,
-            (id_t)((size_t)rand() % (BLOCK_COUNT - length + 1))
-        );
+        set_gene_length(gene, get_gene_length(gene) + 1);
+        remainingBlocks--;
+    }
+
+    size_t days[DAY_COUNT];
+    for (size_t i = 0; i < DAY_COUNT; i++) {
+        days[i] = i;
+    }
+
+    for (size_t i = DAY_COUNT - 1; i > 0; i--) {
+        size_t other = (size_t)rand() % (i + 1);
+        size_t temporary = days[i];
+        days[i] = days[other];
+        days[other] = temporary;
+    }
+
+    for (size_t i = 0; i < activeSessionCount; i++) {
+        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
+        size_t length = get_gene_length(gene);
+
+        set_gene_day(gene, days[i]);
+        set_gene_start_block_id(gene, (id_t)((size_t)rand() % (BLOCK_COUNT - length + 1)));
     }
 
     return 1;
@@ -122,7 +143,7 @@ void create_first_population(population_t* population) {
                 if (get_gene_dictation_id(nextGene) != dictationId) {
                     break;
                 }
-                groupEnd++;
+                groupEnd++; 
             }
 
             dictation_t* dictation = query_dictation(dictationId);
@@ -138,6 +159,5 @@ void create_first_population(population_t* population) {
         }
     }
 }
-
 
 
