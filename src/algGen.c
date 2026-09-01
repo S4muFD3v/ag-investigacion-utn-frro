@@ -5,26 +5,61 @@
 
 enum {
     DAY_COUNT = 5,
-    BLOCK_COUNT = 8
+    BLOCK_COUNT = 8,
+    MAX_RANDOMIZATION_ATTEMPTS = 100
 };
 
-static gene_t* gene_at(gene_t* firstGene, size_t geneSize, size_t position) {
-    return (gene_t*)((char*)firstGene + geneSize * position);
+static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, size_t lastPosition) {
+    
+    size_t size = lastPosition - firstPosition;
+    size_t day[size];
+    id_t startBlockId[size];
+    size_t length[size];
+    id_t comissionId = get_comission_id_from_gene(get_gene_at(chromosome, firstPosition));
+    id_t teacherId = get_teacher_id_from_gene(get_gene_at(chromosome, firstPosition));
+
+    for (size_t i = firstPosition; i < lastPosition; i++) {
+        gene_t* gene = get_gene_at(chromosome, i);
+        day[i - firstPosition] = get_gene_day(gene);
+        startBlockId[i - firstPosition] = get_gene_start_block_id(gene);
+        length[i - firstPosition] = get_gene_length(gene);   
+    }
+
+    for (size_t j = 0; j < firstPosition; j++) {
+        gene_t* geneCheck = get_gene_at(chromosome, j);
+        size_t dayCheck = get_gene_day(geneCheck);
+        id_t startBlockIdCheck = get_gene_start_block_id(geneCheck);
+        size_t lengthCheck = get_gene_length(geneCheck);
+        id_t comissionIdCheck = get_comission_id_from_gene(geneCheck);
+        id_t teacherIdCheck = get_teacher_id_from_gene(geneCheck);
+        
+        if (comissionIdCheck == comissionId || teacherIdCheck == teacherId) {
+            for (size_t k = 0; k < size; k++) {
+                if (lengthCheck == 0 || length[k] == 0) {
+                    continue;
+                }
+                if (dayCheck == day[k] && startBlockIdCheck < startBlockId[k] + length[k] && startBlockIdCheck + lengthCheck > startBlockId[k]) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
 }
 
-static int randomize_dictation(gene_t* firstGene, size_t geneSize, size_t firstPosition, size_t potentialSessionCount, size_t weeklyBlocks) {
+static int randomize_dictation(chromosome_t* chromosome,
+    size_t firstPosition, size_t potentialSessionCount, size_t weeklyBlocks) {
     if (potentialSessionCount == 0) {
         return 0;
     }
 
-    for (size_t i = 0; i < potentialSessionCount; i++) {
-        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
-        set_gene_day(gene, 0);
-        set_gene_start_block_id(gene, 0);
-        set_gene_length(gene, 0);
-    }
-
     if (weeklyBlocks == 0) {
+        for (size_t i = 0; i < potentialSessionCount; i++) {
+            gene_t* gene = get_gene_at(chromosome, firstPosition + i);
+            set_gene_day(gene, 0);
+            set_gene_start_block_id(gene, 0);
+            set_gene_length(gene, 0);
+        }
         return 1;
     }
 
@@ -39,49 +74,63 @@ static int randomize_dictation(gene_t* firstGene, size_t geneSize, size_t firstP
     size_t minActiveSessions =
         (weeklyBlocks + BLOCK_COUNT - 1) / BLOCK_COUNT;
 
-
-    size_t activeSessionCount = minActiveSessions +
-        (size_t)rand() % (maxActiveSessions - minActiveSessions + 1);
-
-    for (size_t i = 0; i < activeSessionCount; i++) {
-        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
-        set_gene_length(gene, 1);
-    }
-
-    size_t remainingBlocks = weeklyBlocks - activeSessionCount;
-    while (remainingBlocks > 0) {
-        size_t sessionPosition = (size_t)rand() % activeSessionCount;
-        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + sessionPosition);
-
-        if (get_gene_length(gene) == BLOCK_COUNT) {
-            continue;
+    for (size_t attempt = 0; attempt < MAX_RANDOMIZATION_ATTEMPTS; attempt++) {
+        for (size_t i = 0; i < potentialSessionCount; i++) {
+            gene_t* gene = get_gene_at(chromosome, firstPosition + i);
+            set_gene_day(gene, 0);
+            set_gene_start_block_id(gene, 0);
+            set_gene_length(gene, 0);
         }
 
-        set_gene_length(gene, get_gene_length(gene) + 1);
-        remainingBlocks--;
+        size_t activeSessionCount = minActiveSessions +
+            (size_t)rand() % (maxActiveSessions - minActiveSessions + 1);
+
+        for (size_t i = 0; i < activeSessionCount; i++) {
+            gene_t* gene = get_gene_at(chromosome, firstPosition + i);
+            set_gene_length(gene, 1);
+        }
+
+        size_t remainingBlocks = weeklyBlocks - activeSessionCount;
+        while (remainingBlocks > 0) {
+            size_t sessionPosition = (size_t)rand() % activeSessionCount;
+            gene_t* gene = get_gene_at(chromosome,
+                                    firstPosition + sessionPosition);
+
+            if (get_gene_length(gene) == BLOCK_COUNT) {
+                continue;
+            }
+
+            set_gene_length(gene, get_gene_length(gene) + 1);
+            remainingBlocks--;
+        }
+
+        size_t days[DAY_COUNT];
+        for (size_t i = 0; i < DAY_COUNT; i++) {
+            days[i] = i;
+        }
+        
+        for (size_t i = DAY_COUNT - 1; i > 0; i--) {
+            size_t other = (size_t)rand() % (i + 1);
+            size_t temporary = days[i];
+            days[i] = days[other];
+            days[other] = temporary;
+        }
+
+        for (size_t i = 0; i < activeSessionCount; i++) {
+            gene_t* gene = get_gene_at(chromosome, firstPosition + i);
+            size_t length = get_gene_length(gene);
+
+            set_gene_day(gene, days[i]);
+            set_gene_start_block_id(gene, (id_t)((size_t)rand() % (BLOCK_COUNT - length + 1)));
+        }
+
+        if (validation_overlaps(chromosome, firstPosition,
+                          firstPosition + potentialSessionCount)) {
+            return 1;
+        }
     }
 
-    size_t days[DAY_COUNT];
-    for (size_t i = 0; i < DAY_COUNT; i++) {
-        days[i] = i;
-    }
-
-    for (size_t i = DAY_COUNT - 1; i > 0; i--) {
-        size_t other = (size_t)rand() % (i + 1);
-        size_t temporary = days[i];
-        days[i] = days[other];
-        days[other] = temporary;
-    }
-
-    for (size_t i = 0; i < activeSessionCount; i++) {
-        gene_t* gene = gene_at(firstGene, geneSize, firstPosition + i);
-        size_t length = get_gene_length(gene);
-
-        set_gene_day(gene, days[i]);
-        set_gene_start_block_id(gene, (id_t)((size_t)rand() % (BLOCK_COUNT - length + 1)));
-    }
-
-    return 1;
+    return 0;
 }
 
 population_t* init_population(const chromosome_t* initial) {
@@ -122,7 +171,6 @@ void create_first_population(population_t* population) {
     }
 
     size_t geneCount = get_chromosome_gene_count(population[0]);
-    size_t geneSize = get_sizeof_genes();
 
     for (size_t i = 1; i < POPULATION_SIZE; i++) {
         population[i] = clone_chromosome(population[0]);
@@ -130,16 +178,15 @@ void create_first_population(population_t* population) {
             return;
         }
 
-        gene_t* firstGene = get_genes(population[i]);
         size_t groupStart = 0;
 
         while (groupStart < geneCount) {
-            gene_t* firstGroupGene = gene_at(firstGene, geneSize, groupStart);
+            gene_t* firstGroupGene = get_gene_at(population[i], groupStart);
             id_t dictationId = get_gene_dictation_id(firstGroupGene);
             size_t groupEnd = groupStart + 1;
 
             while (groupEnd < geneCount) {
-                gene_t* nextGene = gene_at(firstGene, geneSize, groupEnd);
+                gene_t* nextGene = get_gene_at(population[i], groupEnd);
                 if (get_gene_dictation_id(nextGene) != dictationId) {
                     break;
                 }
@@ -149,7 +196,8 @@ void create_first_population(population_t* population) {
             dictation_t* dictation = query_dictation(dictationId);
             subject_t* subject = dictation == NULL ? NULL : query_subject(get_dictation_subject_id(dictation));
 
-            if (subject == NULL || !randomize_dictation(firstGene, geneSize, groupStart, (groupEnd - groupStart), get_subject_weekly_hours(subject))) {
+            if (subject == NULL || !randomize_dictation(population[i], groupStart,
+                (groupEnd - groupStart), get_subject_weekly_hours(subject))) {
                 free_chromosome(population[i]);
                 population[i] = NULL;
                 return;
@@ -159,5 +207,3 @@ void create_first_population(population_t* population) {
         }
     }
 }
-
-

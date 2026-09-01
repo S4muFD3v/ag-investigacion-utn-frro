@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include "db.h"
 
 struct gene_t {
 
@@ -97,10 +98,6 @@ gene_t* get_gene_at(chromosome_t* chromosome, size_t position) {
     return chromosome->genes + position;
 }
 
-gene_t* get_genes(chromosome_t* chromosome){
-    return get_gene_at(chromosome, 0);
-}
-
 double get_chromosome_fitness(const chromosome_t* chromosome) {
     return chromosome->fitness;
 }
@@ -144,6 +141,24 @@ void set_gene_length(gene_t* gene, size_t length) {
     gene->length = length;
 }
 
-size_t get_sizeof_genes(void) {
-    return sizeof(gene_t);
+id_t get_comission_id_from_gene(const gene_t* gene) {
+    if (gene == NULL) {
+        return -1;
+    }
+
+    id_t dictationId = gene->dictationId;
+    dictation_t* dictation = query_dictation(dictationId);
+    id_t comissionId = dictation == NULL ? -1 : get_dictation_comission_id(dictation);
+    return comissionId;
+}
+
+id_t get_teacher_id_from_gene(const gene_t* gene) {
+    if (gene == NULL) {
+        return -1;
+    }
+
+    id_t dictationId = gene->dictationId;
+    dictation_t* dictation = query_dictation(dictationId);
+    id_t teacherId = dictation == NULL ? -1 : get_dictation_teacher_id(dictation);
+    return teacherId;
 }
