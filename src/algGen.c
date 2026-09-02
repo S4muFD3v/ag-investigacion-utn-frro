@@ -2,12 +2,8 @@
 #include "chromosome.h"
 #include <stdlib.h>
 #include "db.h"
-
-enum {
-    DAY_COUNT = 5,
-    BLOCK_COUNT = 8,
-    MAX_RANDOMIZATION_ATTEMPTS = 100
-};
+#include "utils/memory.h"
+#include <math.h>
 
 static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, size_t lastPosition) {
     
@@ -204,6 +200,84 @@ void create_first_population(population_t* population) {
             }
 
             groupStart = groupEnd;
+        }
+    }
+}
+
+size_t validate_r3(population_t* population, size_t index) {
+    size_t nmax = 3;
+    size_t penalty = 0;
+    if (population[index] == NULL) {
+        return 0;
+    }
+    chromosome_t* chromosome = population[index];
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    for (size_t j = 0; j < geneCount; j++) {
+        gene_t* gene = get_gene_at(chromosome, j);
+        size_t length = get_gene_length(gene);
+        if (length > nmax) {
+            penalty += length - nmax;
+        }
+    }
+    return penalty;
+}
+
+size_t validate_r5(population_t* population, size_t index) {
+    if (population[index] == NULL) {
+        return 0;
+    }
+    chromosome_t* chromosome = population[index];
+    size_t geneCount = get_chromosome_gene_count(chromosome);    
+    dynarr_t* checkedComissionId = init_dynamic_array(sizeof(id_t), 50);
+
+    for (size_t i = 0; i < geneCount ; i++) {
+        size_t dailyBlocks[DAY_COUNT] = {0};
+        gene_t* gene = get_gene_at(chromosome, i);
+        size_t length = get_gene_length(gene);
+        size_t day = get_gene_day(gene);
+        dailyBlocks[day] += length;
+        id_t comissionId = get_comission_id_from_gene(gene);
+        size_t checkedCount = dynamic_array_size(checkedComissionId);
+        int alreadyChecked = 0;
+
+        for (size_t j = 0; j < checkedCount; j++) {
+            id_t* checkedId = (id_t*)at(checkedComissionId, j);
+            if (*checkedId == comissionId) {
+                alreadyChecked = 1;
+                break;
+            }
+        }
+
+        if (alreadyChecked) {
+            continue;
+        }
+
+        id_t* newSlot = (id_t*)push_slot(checkedComissionId);
+        if (newSlot == NULL) {
+            free_dynamic_array(checkedComissionId);
+            return 0;
+        }
+        *newSlot = comissionId;
+
+        for (size_t j = i+1; j < geneCount; j++) {
+            gene_t* nextGene = get_gene_at(chromosome, j);
+            id_t nextComissionId = get_comission_id_from_gene(nextGene);
+            if (comissionId == nextComissionId) {
+                size_t nextDay = get_gene_day(nextGene);
+                size_t nextLength = get_gene_length(nextGene);
+                dailyBlocks[nextDay] += nextLength;
+            }
+        }
+        size_t totalBlocks = 0;
+
+        for (size_t day = 0; day < DAY_COUNT; day++) {
+            totalBlocks += dailyBlocks[day];
+        }
+
+        double average = (double)totalBlocks / DAY_COUNT;
+
+        for (size_t day = 0; day < DAY_COUNT; day++) {
+            penalty += fabs((double)dailyBlocks[day] - average);
         }
     }
 }

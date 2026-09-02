@@ -3,6 +3,9 @@
 
 #include "chromosome.h"
 #define POPULATION_SIZE 30
+#define DAY_COUNT 5
+#define BLOCK_COUNT 8
+#define MAX_RANDOMIZATION_ATTEMPTS 100
 
 
 typedef chromosome_t* population_t;
@@ -10,5 +13,7 @@ typedef chromosome_t* population_t;
 population_t *init_population(const chromosome_t *initial);
 void free_population(population_t *population);
 void create_first_population(population_t *population);
+size_t validate_r3(population_t* population, size_t index);
+size_t validate_r5(population_t* population, size_t index);
 
 #endif
