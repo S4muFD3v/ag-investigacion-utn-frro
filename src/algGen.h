@@ -12,8 +12,9 @@ typedef chromosome_t* population_t;
 
 population_t *init_population(const chromosome_t *initial);
 void free_population(population_t *population);
-void create_first_population(population_t *population);
-size_t validate_r3(population_t* population, size_t index);
-size_t validate_r5(population_t* population, size_t index);
+int create_first_population(population_t *population);
+double validate_r3(population_t* population, size_t index);
+double validate_r5(population_t* population, size_t index);
+double validate_r7(population_t* population, size_t index);
 
 #endif

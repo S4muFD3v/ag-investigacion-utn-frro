@@ -162,3 +162,14 @@ id_t get_teacher_id_from_gene(const gene_t* gene) {
     id_t teacherId = dictation == NULL ? -1 : get_dictation_teacher_id(dictation);
     return teacherId;
 }
+
+id_t get_subject_id_from_gene(const gene_t* gene) {
+    if (gene == NULL) {
+        return -1;
+    }
+
+    id_t dictationId = gene->dictationId;
+    dictation_t* dictation = query_dictation(dictationId);
+    id_t subjectId = dictation == NULL ? -1 : get_dictation_subject_id(dictation);
+    return subjectId;
+} 
