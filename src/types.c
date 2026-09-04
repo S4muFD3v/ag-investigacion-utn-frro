@@ -16,7 +16,7 @@ struct com_subjects_t {
 struct comission_t {
     id_t id;
     size_t year;
-    schedule_t schedule;
+    schedule_t first_period;
 
     com_subjects_t *subjects;
     size_t length;
@@ -112,11 +112,11 @@ void set_comission_year(comission_t* comission, size_t year) {
 }
 
 schedule_t get_comission_schedule(comission_t* comission) {
-    return comission->schedule;
+    return comission->first_period;
 }
 
-void set_comission_schedule(comission_t* comission, schedule_t schedule) {
-    comission->schedule = schedule;
+void set_comission_schedule(comission_t* comission, schedule_t first_period) {
+    comission->first_period = first_period;
 }
 
 com_subjects_t* get_comission_subjects(comission_t* comission) {

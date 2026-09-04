@@ -62,7 +62,7 @@ size_t get_comission_year(comission_t* comission);
 void set_comission_year(comission_t* comission, size_t year);
 
 schedule_t get_comission_schedule(comission_t* comission);
-void set_comission_schedule(comission_t* comission, schedule_t schedule);
+void set_comission_schedule(comission_t* comission, schedule_t first_period);
 
 com_subjects_t* get_comission_subjects(comission_t* comission);
 void set_comission_subjects(comission_t* comission, com_subjects_t* subjects);
