@@ -10,7 +10,7 @@ int main() {
     get_comissions(file, &com_count, &comission_ids);
 
     schedule_data_t* sch;
-    get_schedule_for_comission(file, comission_ids, &sch);
+    get_schedule_for_comission(file, "2k01", &sch);
     close_file(file);
     return 0;
 }
