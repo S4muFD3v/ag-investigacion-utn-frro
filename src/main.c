@@ -16,5 +16,7 @@ int main() {
     schedule_data_t* sch;
     get_schedule_for_comission(file, "2k01", &sch);
     close_file(file);
+    print_schedule(sch);
+    delete_schedule(sch);
     return 0;
 }
