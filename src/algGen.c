@@ -6,6 +6,40 @@
 #include "utils/r7_matrix.h"
 #include <math.h>
 
+typedef struct {
+    id_t comissionId;
+    schedule_t schedule;
+    size_t year;
+    size_t firstStart[DAY_COUNT];
+    size_t lastEnd[DAY_COUNT];
+    int isOccupied[DAY_COUNT];
+} comission_schedule_t;
+
+
+static id_t local_to_global_block(id_t comissionId, id_t localBlock){
+
+    comission_t* comission = query_comission(comissionId);
+    if (comission == NULL) {
+        return -1;
+    }
+
+    schedule_t schedule = get_comission_schedule(comission);
+
+    switch (schedule) {
+        case SCHEDULE_MORNING:
+            return localBlock;
+
+        case SCHEDULE_AFTERNOON:
+            return localBlock + 7;
+
+        case SCHEDULE_EVENING:
+            return localBlock + 14;
+
+        default:
+            return -1;
+    }
+}
+
 static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, size_t lastPosition) {
     
     size_t size = lastPosition - firstPosition;
@@ -26,16 +60,17 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
     for (size_t i = firstPosition; i < lastPosition; i++) {
         gene_t* gene = get_gene_at(chromosome, i);
         day[i - firstPosition] = get_gene_day(gene);
-        startBlockId[i - firstPosition] = get_gene_start_block_id(gene);
+        id_t startBlockIdValue = get_gene_start_block_id(gene);
+        startBlockId[i - firstPosition] = local_to_global_block(comissionId, startBlockIdValue);
         length[i - firstPosition] = get_gene_length(gene);   
     }
 
     for (size_t j = 0; j < firstPosition; j++) {
         gene_t* geneCheck = get_gene_at(chromosome, j);
         size_t dayCheck = get_gene_day(geneCheck);
-        id_t startBlockIdCheck = get_gene_start_block_id(geneCheck);
-        size_t lengthCheck = get_gene_length(geneCheck);
         id_t comissionIdCheck = get_comission_id_from_gene(geneCheck);
+        id_t startBlockIdCheck = local_to_global_block(comissionIdCheck, get_gene_start_block_id(geneCheck));
+        size_t lengthCheck = get_gene_length(geneCheck);
         id_t teacherIdCheck = get_teacher_id_from_gene(geneCheck);
         
         if (comissionIdCheck == comissionId || teacherIdCheck == teacherId) {
@@ -230,7 +265,6 @@ int create_first_population(population_t* population) {
 }
 
 double validate_r3(population_t* population, size_t index) {
-    size_t nmax = 3;
     double penalty = 0;
     if (population[index] == NULL) {
         return INFINITY;
@@ -240,8 +274,8 @@ double validate_r3(population_t* population, size_t index) {
     for (size_t j = 0; j < geneCount; j++) {
         gene_t* gene = get_gene_at(chromosome, j);
         size_t length = get_gene_length(gene);
-        if (length > nmax) {
-            penalty += (double)(length - nmax);
+        if (length > R3_MAX_LENGTH) {
+            penalty += (double)(length - R3_MAX_LENGTH);
         }
     }
     return penalty;
@@ -356,7 +390,7 @@ double validate_r7 (population_t* population, size_t index){
             for (size_t k = i; k < groupEnd; k++){
                 gene_t* currentGene = get_gene_at(chromosome, k);
                 size_t currentDay = get_gene_day(currentGene);
-                size_t currentStartBlock = get_gene_start_block_id(currentGene);
+                size_t currentStartBlock = local_to_global_block(comissionId, get_gene_start_block_id(currentGene));
                 size_t currentLength = get_gene_length(currentGene);
                 if (currentLength == 0) {
                     continue;
@@ -365,7 +399,7 @@ double validate_r7 (population_t* population, size_t index){
                 for (size_t l = j; l < nextGroupEnd; l++){
                     gene_t* nextGeneInGroup = get_gene_at(chromosome, l);
                     size_t nextDay = get_gene_day(nextGeneInGroup);
-                    size_t nextStartBlock = get_gene_start_block_id(nextGeneInGroup);
+                    size_t nextStartBlock = local_to_global_block(nextComissionId, get_gene_start_block_id(nextGeneInGroup));
                     size_t nextLength = get_gene_length(nextGeneInGroup);
                     if (nextLength == 0) {
                         continue;
@@ -393,13 +427,107 @@ double validate_r7 (population_t* population, size_t index){
                     }
                 }
             }
-
             j = nextGroupEnd - 1;
         }
-
-        
         i = groupEnd - 1;
     }
+    return totalPenalty;
+}
 
+static int are_consecutive_blocks (schedule_t firstSchedule, schedule_t secondSchedule) {
+    return (firstSchedule == SCHEDULE_MORNING && secondSchedule == SCHEDULE_AFTERNOON) ||
+           (firstSchedule == SCHEDULE_AFTERNOON && secondSchedule == SCHEDULE_EVENING);
+}
+
+double validate_r6(population_t* population, size_t index) {
+    if (population[index] == NULL) {
+        return INFINITY;
+    }
+
+    chromosome_t* chromosome = population[index];
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    size_t comissionCount = get_comission_count();
+    size_t usedComissions = 0;
+    double totalPenalty = 0.0;
+    comission_schedule_t* comissionSchedules =
+        (comission_schedule_t*)calloc(comissionCount, sizeof(comission_schedule_t));
+
+    if (comissionSchedules == NULL) {
+        return INFINITY;
+    }
+
+    for (size_t i = 0; i < geneCount; i++) {
+        gene_t* gene = get_gene_at(chromosome, i);
+        size_t length = get_gene_length(gene);
+        if (length == 0) {
+            continue;
+        }
+
+        id_t comissionId = get_comission_id_from_gene(gene);
+        comission_t* comission = query_comission(comissionId);
+        size_t day = get_gene_day(gene);
+        schedule_t schedule = get_comission_schedule(comission);
+        size_t initialBlock = (size_t)local_to_global_block(
+            comissionId, get_gene_start_block_id(gene));
+        size_t finalBlock = initialBlock + length - 1;
+        size_t position = 0;
+
+        while (position < usedComissions && comissionSchedules[position].comissionId != comissionId) {
+            position++;
+        }
+
+        if (position == usedComissions) {
+            comissionSchedules[position].comissionId = comissionId;
+            comissionSchedules[position].schedule = schedule;
+            comissionSchedules[position].year = get_comission_year(comission);
+            usedComissions++;
+        }
+
+        if (!comissionSchedules[position].isOccupied[day]) {
+            comissionSchedules[position].firstStart[day] = initialBlock;
+            comissionSchedules[position].lastEnd[day] = finalBlock;
+            comissionSchedules[position].isOccupied[day] = 1;
+        } else {
+            if (initialBlock < comissionSchedules[position].firstStart[day]) {
+                comissionSchedules[position].firstStart[day] = initialBlock;
+            }
+            if (finalBlock > comissionSchedules[position].lastEnd[day]) {
+                comissionSchedules[position].lastEnd[day] = finalBlock;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < usedComissions; i++) {
+        for (size_t j = 0; j < usedComissions; j++) {
+            if (!are_consecutive_blocks(comissionSchedules[i].schedule,
+                                        comissionSchedules[j].schedule)) {
+                continue;
+            }
+
+            size_t yearDifference =
+                comissionSchedules[i].year > comissionSchedules[j].year
+                    ? comissionSchedules[i].year - comissionSchedules[j].year
+                    : comissionSchedules[j].year - comissionSchedules[i].year;
+            double yearWeight = 1.0 / ((double)yearDifference + 1.0);
+
+            for (size_t day = 0; day < DAY_COUNT; day++) {
+                if (!comissionSchedules[i].isOccupied[day] ||
+                    !comissionSchedules[j].isOccupied[day]) {
+                    continue;
+                }
+
+                size_t previousEnd = comissionSchedules[i].lastEnd[day];
+                size_t nextStart = comissionSchedules[j].firstStart[day];
+
+                if (nextStart > previousEnd + R6_MAX_BLOCK_DIFFERENCE) {
+                    size_t excessBlocks =
+                        nextStart - previousEnd - R6_MAX_BLOCK_DIFFERENCE;
+                    totalPenalty += (double)excessBlocks * yearWeight;
+                }
+            }
+        }
+    }
+
+    free(comissionSchedules);
     return totalPenalty;
 }
