@@ -7,13 +7,14 @@
 #include <stdio.h>
 #include "../utils/memory.h"
 
-#define SKIP_INTERVAL(val, minVal, maxVal) if(val >= minVal && val < maxVal) continue
-#define DAYS_OF_THE_WEEK 7
+#define SKIP_RANGE(val, minVal, maxVal) if(val >= minVal && val < maxVal) continue
+#define DAYS_OF_THE_WEEK 5
 #define SCHEDULE_BLOCKS 8
-#define SUBJECT_NAME_MAX_LENGTH 156
+#define SUBJECT_NAME_MAX_LENGTH 256
 
 struct schedule_data_t {
-    char schedule[DAYS_OF_THE_WEEK][SCHEDULE_BLOCKS][SUBJECT_NAME_MAX_LENGTH];
+    char first_period[DAYS_OF_THE_WEEK][SCHEDULE_BLOCKS][SUBJECT_NAME_MAX_LENGTH];
+    char second_period[DAYS_OF_THE_WEEK][SCHEDULE_BLOCKS][SUBJECT_NAME_MAX_LENGTH];
 };
 struct com_id_t {
     char name[6];
@@ -21,8 +22,8 @@ struct com_id_t {
 
 
 int list_page_callback(const XLSXIOCHAR* name, void* callbackdata);
-void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, char* name);
-char* get_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block);
+void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block, char* name);
+char* get_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block);
 
 
 schedule_file_t open_file(const char* path) {
@@ -50,25 +51,51 @@ void get_schedule_for_comission(schedule_file_t file, com_id_t* comId, schedule_
     size_t lastColumn = xlsxioread_sheet_last_column_index(sheet);
     size_t lastRow = xlsxioread_sheet_last_row_index(sheet);
     size_t rowIndex = 0;
-    schedule_data_t data;
-    size_t blockIndex = 0;
-    size_t dayIndex = 0;
-    while(xlsxioread_sheet_next_row(sheet)) { 
-        rowIndex++;
-        SKIP_INTERVAL(rowIndex, 1, 6); // Skip affiliation
+    size_t periodRowIndex = 0;
+    size_t cellIndex = 0;
+    (*o_schedule) = create_schedule();
+    for (rowIndex = 0; xlsxioread_sheet_next_row(sheet); rowIndex++) {
+        const size_t blockIndex = periodRowIndex / 3;
+        SKIP_RANGE(rowIndex, 0, 5); // Skip affiliation
+        SKIP_RANGE(blockIndex, 8, 10000);
         char* cellValue;
         size_t cellIndex = 0;
-        while((cellValue = xlsxioread_sheet_next_cell(sheet)) != NULL) {
-            cellIndex++;
-            SKIP_INTERVAL(cellIndex, 1, 3);
-            //set_subjet_name_for_block(&data, dayIndex, blockIndex, cellValue);
+        for (cellIndex = 0; (cellValue = xlsxioread_sheet_next_cell(sheet)) != NULL; cellIndex++) {
+            const size_t dayIndex = cellIndex - 2;
+            SKIP_RANGE(cellIndex, 0, 2);
+            char* prevName = get_subjet_name_for_block(*o_schedule, dayIndex, blockIndex);
+            const size_t cellSize = strlen(cellValue) * sizeof(char);
+            const size_t prevNameSize = strlen(prevName) * sizeof(char);
+            const size_t newNameSize = cellSize + prevNameSize + 1;
+            char* newName = calloc(cellSize + prevNameSize + 1, sizeof(char));
+            strcat_s(newName, newNameSize, prevName);
+            strcat_s(newName, newNameSize, cellValue);
+            xlsxioread_free(cellValue);
+            set_subjet_name_for_block(*o_schedule, dayIndex, blockIndex, newName);
+            free(newName);
         }
+        periodRowIndex++;
     }
     xlsxioread_sheet_close(sheet);
+
+    for (size_t b = 0; b < SCHEDULE_BLOCKS; b++) {
+        printf("\033[31m|\033[0m");
+        for (size_t d = 0; d < DAYS_OF_THE_WEEK; d++) {
+            printf("%s\033[31m|\033[0m", (*o_schedule)->first_period[d][b]);
+        }
+        printf("\n");
+    }
 }
 
 
+schedule_data_t* create_schedule() {
+    schedule_data_t* sch = calloc(sizeof(schedule_data_t), sizeof(char));
+    return sch;
+}
 
+void delete_schedule(const schedule_data_t* schedule) {
+    free(schedule);
+}
 
 
 
@@ -89,12 +116,12 @@ int list_page_callback(const XLSXIOCHAR* name, void* callbackdata) {
     return 0;
 }
 
-void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, char* name) {
-    char* sub = schedule->schedule[day][block];
+void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block, char* name) {
+    char* sub = first_period->first_period[day][block];
     memset(sub, '\0', SUBJECT_NAME_MAX_LENGTH);
-    memcpy_s(sub, SUBJECT_NAME_MAX_LENGTH, name, strlen(name));
+    memcpy_s(sub, SUBJECT_NAME_MAX_LENGTH, name, strlen(name) + 1);
 }
 
-char* get_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block) {
-    return schedule->schedule[day][block];
+char* get_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block) {
+    return first_period->first_period[day][block];
 }
