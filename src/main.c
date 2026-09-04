@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 #include "load/schedule_loader.h"
 
 int main() {
+    srand((unsigned int)time(NULL));
+
     schedule_file_t file = open_file("C:/Users/PC/Downloads/horarios2do.xlsx");
 
     size_t com_count;
