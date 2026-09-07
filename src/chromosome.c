@@ -172,4 +172,32 @@ id_t get_subject_id_from_gene(const gene_t* gene) {
     dictation_t* dictation = query_dictation(dictationId);
     id_t subjectId = dictation == NULL ? -1 : get_dictation_subject_id(dictation);
     return subjectId;
-} 
+}
+
+fmp_t get_fmp_from_gene(const gene_t* gene) {
+    if (gene == NULL) {
+        return FMP_MAX_ENUM;
+    }
+
+    dictation_t* dictation = query_dictation(gene->dictationId);
+    if (dictation == NULL) {
+        return FMP_MAX_ENUM;
+    }
+
+    id_t subjectId = get_dictation_subject_id(dictation);
+    comission_t* comission = query_comission(
+        get_dictation_comission_id(dictation));
+    if (comission == NULL) {
+        return FMP_MAX_ENUM;
+    }
+
+    size_t subjectCount = get_comission_length(comission);
+    for (size_t i = 0; i < subjectCount; i++) {
+        com_subjects_t* comSubject = get_comission_subject_at(comission, i);
+        if (get_com_subject_id(comSubject) == subjectId) {
+            return get_com_subject_q(comSubject);
+        }
+    }
+
+    return FMP_MAX_ENUM;
+}

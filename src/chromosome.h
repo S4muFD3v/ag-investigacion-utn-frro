@@ -45,5 +45,6 @@ void set_gene_length(gene_t* gene, size_t length);
 id_t get_comission_id_from_gene(const gene_t* gene);
 id_t get_teacher_id_from_gene(const gene_t* gene);
 id_t get_subject_id_from_gene(const gene_t* gene);
+fmp_t get_fmp_from_gene(const gene_t* gene);
 
 #endif

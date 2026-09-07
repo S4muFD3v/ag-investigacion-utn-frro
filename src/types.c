@@ -127,6 +127,13 @@ void set_comission_subjects(comission_t* comission, com_subjects_t* subjects) {
     comission->subjects = subjects;
 }
 
+com_subjects_t* get_comission_subject_at(comission_t* comission, size_t position) {
+    if (position >= comission->length) {
+        return NULL;
+    }
+    return comission->subjects + position;
+}
+
 size_t get_comission_length(comission_t* comission) {
     return comission->length;
 }

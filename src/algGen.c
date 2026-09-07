@@ -6,14 +6,25 @@
 #include "utils/r7_matrix.h"
 #include <math.h>
 
+
 typedef struct {
     id_t comissionId;
     schedule_t schedule;
     size_t year;
-    size_t firstStart[DAY_COUNT];
-    size_t lastEnd[DAY_COUNT];
-    int isOccupied[DAY_COUNT];
+    size_t firstStart[ACADEMIC_PERIOD_COUNT][DAY_COUNT];
+    size_t lastEnd[ACADEMIC_PERIOD_COUNT][DAY_COUNT];
+    int isOccupied[ACADEMIC_PERIOD_COUNT][DAY_COUNT];
 } comission_schedule_t;
+
+static int share_academic_period(fmp_t first, fmp_t second) {
+    return first == FMP_BOTH || second == FMP_BOTH || first == second;
+}
+
+static int is_active_in_period(fmp_t fmp, size_t period) {
+    return fmp == FMP_BOTH ||
+           (period == 0 && fmp == FMP_FIRST) ||
+           (period == 1 && fmp == FMP_SECOND);
+}
 
 
 static id_t local_to_global_block(id_t comissionId, id_t localBlock){
@@ -54,8 +65,10 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
         return 0;
     }
 
-    id_t comissionId = get_comission_id_from_gene(get_gene_at(chromosome, firstPosition));
-    id_t teacherId = get_teacher_id_from_gene(get_gene_at(chromosome, firstPosition));
+    gene_t* firstGene = get_gene_at(chromosome, firstPosition);
+    id_t comissionId = get_comission_id_from_gene(firstGene);
+    id_t teacherId = get_teacher_id_from_gene(firstGene);
+    fmp_t fmp = get_fmp_from_gene(firstGene);
 
     for (size_t i = firstPosition; i < lastPosition; i++) {
         gene_t* gene = get_gene_at(chromosome, i);
@@ -72,8 +85,10 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
         id_t startBlockIdCheck = local_to_global_block(comissionIdCheck, get_gene_start_block_id(geneCheck));
         size_t lengthCheck = get_gene_length(geneCheck);
         id_t teacherIdCheck = get_teacher_id_from_gene(geneCheck);
+        fmp_t fmpCheck = get_fmp_from_gene(geneCheck);
         
-        if (comissionIdCheck == comissionId || teacherIdCheck == teacherId) {
+        if ((comissionIdCheck == comissionId || teacherIdCheck == teacherId) &&
+            share_academic_period(fmp, fmpCheck)) {
             for (size_t k = 0; k < size; k++) {
                 if (lengthCheck == 0 || length[k] == 0) {
                     continue;
@@ -291,15 +306,7 @@ double validate_r5(population_t* population, size_t index) {
     double penalty = 0.0;
 
     for (size_t i = 0; i < geneCount ; i++) {
-        size_t dailyBlocks[DAY_COUNT] = {0};
         gene_t* gene = get_gene_at(chromosome, i);
-        size_t length = get_gene_length(gene);
-        size_t day = get_gene_day(gene);
-        if (day >= DAY_COUNT) {
-            free_dynamic_array(checkedComissionId);
-            return INFINITY;
-        }
-        dailyBlocks[day] += length;
         id_t comissionId = get_comission_id_from_gene(gene);
         size_t checkedCount = dynamic_array_size(checkedComissionId);
         int alreadyChecked = 0;
@@ -323,29 +330,37 @@ double validate_r5(population_t* population, size_t index) {
         }
         *newSlot = comissionId;
 
-        for (size_t j = i+1; j < geneCount; j++) {
-            gene_t* nextGene = get_gene_at(chromosome, j);
-            id_t nextComissionId = get_comission_id_from_gene(nextGene);
-            if (comissionId == nextComissionId) {
-                size_t nextDay = get_gene_day(nextGene);
-                size_t nextLength = get_gene_length(nextGene);
-                if (nextDay >= DAY_COUNT) {
-                    free_dynamic_array(checkedComissionId);
-                    return INFINITY;
+        size_t dailyBlocks[ACADEMIC_PERIOD_COUNT][DAY_COUNT] = {{0}};
+
+        for (size_t j = i; j < geneCount; j++) {
+            gene_t* comissionGene = get_gene_at(chromosome, j);
+            if (get_comission_id_from_gene(comissionGene) != comissionId) {
+                continue;
+            }
+
+            size_t day = get_gene_day(comissionGene);
+            size_t length = get_gene_length(comissionGene);
+            fmp_t fmp = get_fmp_from_gene(comissionGene);
+
+            for (size_t period = 0; period < ACADEMIC_PERIOD_COUNT; period++) {
+                if (is_active_in_period(fmp, period)) {
+                    dailyBlocks[period][day] += length;
                 }
-                dailyBlocks[nextDay] += nextLength;
             }
         }
-        size_t totalBlocks = 0;
 
-        for (size_t day = 0; day < DAY_COUNT; day++) {
-            totalBlocks += dailyBlocks[day];
-        }
+        for (size_t period = 0; period < ACADEMIC_PERIOD_COUNT; period++) {
+            size_t totalBlocks = 0;
 
-        double average = (double)totalBlocks / DAY_COUNT;
+            for (size_t day = 0; day < DAY_COUNT; day++) {
+                totalBlocks += dailyBlocks[period][day];
+            }
 
-        for (size_t day = 0; day < DAY_COUNT; day++) {
-            penalty += fabs((double)dailyBlocks[day] - average);
+            double average = (double)totalBlocks / DAY_COUNT;
+
+            for (size_t day = 0; day < DAY_COUNT; day++) {
+                penalty += fabs((double)dailyBlocks[period][day] - average);
+            }
         }
     }
     free_dynamic_array(checkedComissionId);
@@ -380,12 +395,19 @@ double validate_r7 (population_t* population, size_t index){
     for (size_t i = 0; i < geneCount; i++) {
         gene_t* gene = get_gene_at(chromosome, i);
         id_t comissionId = get_comission_id_from_gene(gene);
+        fmp_t fmp = get_fmp_from_gene(gene);
         size_t groupEnd = find_group_end(chromosome, i);
 
         for (size_t j = groupEnd; j < geneCount; j++){
             gene_t* nextGene = get_gene_at(chromosome, j);
             id_t nextComissionId = get_comission_id_from_gene(nextGene);
+            fmp_t nextFmp = get_fmp_from_gene(nextGene);
             size_t nextGroupEnd = find_group_end(chromosome, j);
+
+            if (!share_academic_period(fmp, nextFmp)) {
+                j = nextGroupEnd - 1;
+                continue;
+            }
 
             for (size_t k = i; k < groupEnd; k++){
                 gene_t* currentGene = get_gene_at(chromosome, k);
@@ -470,6 +492,7 @@ double validate_r6(population_t* population, size_t index) {
         size_t initialBlock = (size_t)local_to_global_block(
             comissionId, get_gene_start_block_id(gene));
         size_t finalBlock = initialBlock + length - 1;
+        fmp_t fmp = get_fmp_from_gene(gene);
         size_t position = 0;
 
         while (position < usedComissions && comissionSchedules[position].comissionId != comissionId) {
@@ -483,16 +506,22 @@ double validate_r6(population_t* population, size_t index) {
             usedComissions++;
         }
 
-        if (!comissionSchedules[position].isOccupied[day]) {
-            comissionSchedules[position].firstStart[day] = initialBlock;
-            comissionSchedules[position].lastEnd[day] = finalBlock;
-            comissionSchedules[position].isOccupied[day] = 1;
-        } else {
-            if (initialBlock < comissionSchedules[position].firstStart[day]) {
-                comissionSchedules[position].firstStart[day] = initialBlock;
+        for (size_t period = 0; period < ACADEMIC_PERIOD_COUNT; period++) {
+            if (!is_active_in_period(fmp, period)) {
+                continue;
             }
-            if (finalBlock > comissionSchedules[position].lastEnd[day]) {
-                comissionSchedules[position].lastEnd[day] = finalBlock;
+
+            if (!comissionSchedules[position].isOccupied[period][day]) {
+                comissionSchedules[position].firstStart[period][day] = initialBlock;
+                comissionSchedules[position].lastEnd[period][day] = finalBlock;
+                comissionSchedules[position].isOccupied[period][day] = 1;
+            } else {
+                if (initialBlock < comissionSchedules[position].firstStart[period][day]) {
+                    comissionSchedules[position].firstStart[period][day] = initialBlock;
+                }
+                if (finalBlock > comissionSchedules[position].lastEnd[period][day]) {
+                    comissionSchedules[position].lastEnd[period][day] = finalBlock;
+                }
             }
         }
     }
@@ -510,24 +539,176 @@ double validate_r6(population_t* population, size_t index) {
                     : comissionSchedules[j].year - comissionSchedules[i].year;
             double yearWeight = 1.0 / ((double)yearDifference + 1.0);
 
-            for (size_t day = 0; day < DAY_COUNT; day++) {
-                if (!comissionSchedules[i].isOccupied[day] ||
-                    !comissionSchedules[j].isOccupied[day]) {
-                    continue;
-                }
+            for (size_t period = 0; period < ACADEMIC_PERIOD_COUNT; period++) {
+                for (size_t day = 0; day < DAY_COUNT; day++) {
+                    if (!comissionSchedules[i].isOccupied[period][day] ||
+                        !comissionSchedules[j].isOccupied[period][day]) {
+                        continue;
+                    }
 
-                size_t previousEnd = comissionSchedules[i].lastEnd[day];
-                size_t nextStart = comissionSchedules[j].firstStart[day];
+                    size_t previousEnd =
+                        comissionSchedules[i].lastEnd[period][day];
+                    size_t nextStart =
+                        comissionSchedules[j].firstStart[period][day];
 
-                if (nextStart > previousEnd + R6_MAX_BLOCK_DIFFERENCE) {
-                    size_t excessBlocks =
-                        nextStart - previousEnd - R6_MAX_BLOCK_DIFFERENCE;
-                    totalPenalty += (double)excessBlocks * yearWeight;
+                    if (nextStart > previousEnd + R6_MAX_BLOCK_DIFFERENCE) {
+                        size_t excessBlocks =
+                            nextStart - previousEnd - R6_MAX_BLOCK_DIFFERENCE;
+                        totalPenalty += (double)excessBlocks * yearWeight;
+                    }
                 }
             }
         }
     }
 
     free(comissionSchedules);
+    return totalPenalty;
+}
+
+static int is_elective_subject(id_t subjectId) {
+    const r7_subject_info_t* subjectInfo = r7_subject_by_id(subjectId);
+    if (subjectInfo == NULL) {
+        return 0;
+    }
+    return subjectInfo->kind == R7_SUBJECT_ELECTIVE;
+}
+
+double validate_r8 (population_t* population, size_t index){
+    if (population[index] == NULL) {
+        return INFINITY;
+    }
+
+    chromosome_t* chromosome = population[index];
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    double totalPenalty = 0.0;
+
+    for (size_t i = 0; i < geneCount; i++) {
+        gene_t* gene = get_gene_at(chromosome, i);
+        id_t subjectId = get_subject_id_from_gene(gene);
+        if (!is_elective_subject(subjectId)) continue;
+
+        id_t dictationId = get_gene_dictation_id(gene);
+        size_t n = 1;
+        while ((i + n) < geneCount &&
+               dictationId == get_gene_dictation_id(get_gene_at(chromosome, i + n))) {
+            n++;
+        }
+
+        id_t* comissionChecked =
+            (id_t*)calloc(get_comission_count(), sizeof(id_t));
+        size_t* day = (size_t*)calloc(n, sizeof(size_t));
+        size_t* startBlock = (size_t*)calloc(n, sizeof(size_t));
+        size_t* length = (size_t*)calloc(n, sizeof(size_t));
+
+        if (comissionChecked == NULL || day == NULL ||
+            startBlock == NULL || length == NULL) {
+            free(comissionChecked);
+            free(day);
+            free(startBlock);
+            free(length);
+            return INFINITY;
+        }
+
+        size_t comissionCheckedCount = 0;
+        fmp_t fmp = get_fmp_from_gene(gene);
+        const r7_subject_info_t* electiveInfo = r7_subject_by_id(subjectId);
+
+        for (size_t j = 0; j < n; j++) {
+            gene_t* currentGene = get_gene_at(chromosome, i + j);
+            day[j] = get_gene_day(currentGene);
+            startBlock[j] = local_to_global_block(get_comission_id_from_gene(currentGene), get_gene_start_block_id(currentGene));
+            length[j] = get_gene_length(currentGene);
+        }
+
+        for (size_t j = 0; j < geneCount; j++) {
+            gene_t* geneCheck = get_gene_at(chromosome, j);
+            id_t comissionIdCheck = get_comission_id_from_gene(geneCheck);
+            int alreadyChecked = 0;
+
+            for (size_t k = 0; k < comissionCheckedCount; k++) {
+                if (comissionChecked[k] == comissionIdCheck) {
+                    alreadyChecked = 1;
+                    break;
+                }
+            }
+
+            if (is_elective_subject(get_subject_id_from_gene(geneCheck)) ||
+                alreadyChecked) {
+                continue;
+            }
+
+            size_t dayCheck = get_gene_day(geneCheck);
+            size_t startBlockCheck = local_to_global_block(
+                comissionIdCheck, get_gene_start_block_id(geneCheck));
+            size_t lengthCheck = get_gene_length(geneCheck);
+
+            if (lengthCheck == 0 ||
+                !share_academic_period(fmp, get_fmp_from_gene(geneCheck))) {
+                continue;
+            }
+
+            for (size_t k = 0; k < n; k++) {
+                if (length[k] == 0) {
+                    continue;
+                }
+
+                if (day[k] == dayCheck &&
+                    startBlock[k] < startBlockCheck + lengthCheck &&
+                    startBlock[k] + length[k] > startBlockCheck) {
+                    comission_t* comission = query_comission(comissionIdCheck);
+                    size_t comissionYear = get_comission_year(comission);
+                    size_t yearDifference = comissionYear > electiveInfo->year
+                        ? comissionYear - electiveInfo->year
+                        : electiveInfo->year - comissionYear;
+                    double yearWeight =
+                        1.0 / ((double)yearDifference + 1.0);
+
+                    totalPenalty += yearWeight;
+                    comissionChecked[comissionCheckedCount] = comissionIdCheck;
+                    comissionCheckedCount++;
+                    break;
+                }
+            }
+        }
+
+        free(comissionChecked);
+        free(day);
+        free(startBlock);
+        free(length);
+        i = i + n - 1;
+    }
+    return totalPenalty;
+}
+
+
+double validate_r12(population_t* population, size_t index) {
+    if (population[index] == NULL) {
+        return INFINITY;
+    }
+
+    chromosome_t* chromosome = population[index];
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    double totalPenalty = 0.0;
+
+    for (size_t i = 0; i < geneCount; i++) {
+        size_t groupEnd = find_group_end(chromosome, i);
+        size_t occupiedDays[DAY_COUNT] = {0};
+
+        for (size_t j = i; j < groupEnd; j++) {
+            gene_t* gene = get_gene_at(chromosome, j);
+            if (get_gene_length(gene) > 0) {
+                occupiedDays[get_gene_day(gene)] = 1;
+            }
+        }
+
+        for (size_t day = 0; day < DAY_COUNT - 1; day++) {
+            if (occupiedDays[day] && occupiedDays[day + 1]) {
+                totalPenalty += 1.0;
+            }
+        }
+
+        i = groupEnd - 1;
+    }
+
     return totalPenalty;
 }
