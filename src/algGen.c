@@ -141,6 +141,10 @@ static int randomize_dictation(chromosome_t* chromosome,
     size_t minActiveSessions =
         (weeklyBlocks + BLOCK_COUNT - 1) / BLOCK_COUNT;
 
+    if (minActiveSessions > maxActiveSessions) {
+        return 0;
+    }
+
     for (size_t attempt = 0; attempt < MAX_RANDOMIZATION_ATTEMPTS; attempt++) {
         for (size_t i = 0; i < potentialSessionCount; i++) {
             gene_t* gene = get_gene_at(chromosome, firstPosition + i);
@@ -443,9 +447,13 @@ double validate_r7 (population_t* population, size_t index){
 
                         size_t overlappingBlocks = overlapEnd - overlapStart;
                         id_t subjectId = get_subject_id_from_gene(currentGene);
-                        id_t nextSubjectId = get_subject_id_from_gene(nextGeneInGroup); 
-                        totalPenalty += r7_conflict_weight(subjectId, nextSubjectId)
-                            * (double)overlappingBlocks;
+                        id_t nextSubjectId = get_subject_id_from_gene(nextGeneInGroup);
+                        double conflictWeight =
+                            r7_conflict_weight(subjectId, nextSubjectId);
+                        if (conflictWeight < 0.0) {
+                            return INFINITY;
+                        }
+                        totalPenalty += conflictWeight * (double)overlappingBlocks;
                     }
                 }
             }
