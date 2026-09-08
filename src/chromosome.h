@@ -33,6 +33,7 @@ void init_gene(gene_t* gene, id_t dictationId, size_t day,
                id_t startBlockId, size_t length);
 
 id_t get_gene_dictation_id(const gene_t* gene);
+void set_gene_dictation_id(gene_t* gene, id_t id);
 
 size_t get_gene_day(const gene_t* gene);
 void set_gene_day(gene_t* gene, size_t day);

@@ -117,6 +117,10 @@ id_t get_gene_dictation_id(const gene_t* gene) {
     return gene->dictationId;
 }
 
+void set_gene_dictation_id(gene_t* gene, id_t id) {
+    gene->dictationId = id;
+}
+
 size_t get_gene_day(const gene_t* gene) {
     return gene->day;
 }
