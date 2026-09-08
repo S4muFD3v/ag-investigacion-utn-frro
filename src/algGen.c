@@ -283,7 +283,7 @@ int create_first_population(population_t* population) {
     return 1;
 }
 
-double validate_r3(population_t* population, size_t index) {
+static double validate_r3(population_t* population, size_t index) {
     double penalty = 0;
     if (population[index] == NULL) {
         return INFINITY;
@@ -300,7 +300,7 @@ double validate_r3(population_t* population, size_t index) {
     return penalty;
 }
 
-double validate_r5(population_t* population, size_t index) {
+static double validate_r5(population_t* population, size_t index) {
     if (population[index] == NULL) {
         return INFINITY;
     }
@@ -388,7 +388,24 @@ static size_t find_group_end(chromosome_t* chromosome, size_t startPosition) {
     return groupEnd;
 }
 
-double validate_r7 (population_t* population, size_t index){
+static int validate_chromosome_overlaps(chromosome_t* chromosome) {
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    size_t groupStart = 0;
+
+    while (groupStart < geneCount) {
+        size_t groupEnd = find_group_end(chromosome, groupStart);
+
+        if (!validation_overlaps(chromosome, groupStart, groupEnd)) {
+            return 0;
+        }
+
+        groupStart = groupEnd;
+    }
+
+    return 1;
+}
+
+static double validate_r7 (population_t* population, size_t index){
     if (population[index] == NULL) {
         return INFINITY;
     }
@@ -469,7 +486,7 @@ static int are_consecutive_blocks (schedule_t firstSchedule, schedule_t secondSc
            (firstSchedule == SCHEDULE_AFTERNOON && secondSchedule == SCHEDULE_EVENING);
 }
 
-double validate_r6(population_t* population, size_t index) {
+static double validate_r6(population_t* population, size_t index) {
     if (population[index] == NULL) {
         return INFINITY;
     }
@@ -581,7 +598,7 @@ static int is_elective_subject(id_t subjectId) {
     return subjectInfo->kind == R7_SUBJECT_ELECTIVE;
 }
 
-double validate_r8 (population_t* population, size_t index){
+static double validate_r8 (population_t* population, size_t index){
     if (population[index] == NULL) {
         return INFINITY;
     }
@@ -689,7 +706,7 @@ double validate_r8 (population_t* population, size_t index){
 }
 
 
-double validate_r12(population_t* population, size_t index) {
+static double validate_r12(population_t* population, size_t index) {
     if (population[index] == NULL) {
         return INFINITY;
     }
@@ -719,4 +736,149 @@ double validate_r12(population_t* population, size_t index) {
     }
 
     return totalPenalty;
+}
+
+double fitness_function(population_t* population, size_t index) {
+    if (population[index] == NULL) {
+        return INFINITY;
+    }
+
+    double totalPenalty = 0.0;
+
+    totalPenalty += validate_r3(population, index) * R3_VALUE;
+    totalPenalty += validate_r5(population, index) * R5_VALUE;
+    totalPenalty += validate_r6(population, index) * R6_VALUE;
+    totalPenalty += validate_r7(population, index) * R7_VALUE;
+    totalPenalty += validate_r8(population, index) * R8_VALUE;
+    totalPenalty += validate_r12(population, index)* R12_VALUE;
+
+    return totalPenalty;
+}
+
+void crossover_chromosomes(chromosome_t* chromosome1, chromosome_t* chromosome2) {
+    double probability = (double)rand() / RAND_MAX;
+    if (probability >= CROSSOVER_PROBABILITY) {
+        return;
+    }
+
+    size_t geneCount = get_chromosome_gene_count(chromosome1);
+    size_t index;
+    do {
+        index = (size_t)rand() % geneCount;
+        index = find_group_end(chromosome1, index);
+    } while (index == geneCount);
+
+    chromosome_t* tempChromosome1 = clone_chromosome(chromosome1);
+    chromosome_t* tempChromosome2 = clone_chromosome(chromosome2);
+
+    if (tempChromosome1 == NULL || tempChromosome2 == NULL) {
+        free_chromosome(tempChromosome1);
+        free_chromosome(tempChromosome2);
+        return;
+    }
+
+    for (size_t i = index; i < geneCount; i++) {
+        gene_t* child1Gene = get_gene_at(tempChromosome1, i);
+        gene_t* child2Gene = get_gene_at(tempChromosome2, i);
+        gene_t* parent1Gene = get_gene_at(chromosome1, i);
+        gene_t* parent2Gene = get_gene_at(chromosome2, i);
+
+        set_gene_day(child1Gene, get_gene_day(parent2Gene));
+        set_gene_start_block_id(child1Gene, get_gene_start_block_id(parent2Gene));
+        set_gene_length(child1Gene, get_gene_length(parent2Gene));
+
+        set_gene_day(child2Gene, get_gene_day(parent1Gene));
+        set_gene_start_block_id(child2Gene, get_gene_start_block_id(parent1Gene));
+        set_gene_length(child2Gene, get_gene_length(parent1Gene));
+    }
+
+    if (validate_chromosome_overlaps(tempChromosome1) && validate_chromosome_overlaps(tempChromosome2)) {
+        for (size_t i = index; i < geneCount; i++) {
+            gene_t* chromosome1Gene = get_gene_at(chromosome1, i);
+            gene_t* chromosome2Gene = get_gene_at(chromosome2, i);
+            gene_t* child1Gene = get_gene_at(tempChromosome1, i);
+            gene_t* child2Gene = get_gene_at(tempChromosome2, i);
+
+            set_gene_day(chromosome1Gene, get_gene_day(child1Gene));
+            set_gene_start_block_id(chromosome1Gene, get_gene_start_block_id(child1Gene));
+            set_gene_length(chromosome1Gene, get_gene_length(child1Gene));
+
+            set_gene_day(chromosome2Gene, get_gene_day(child2Gene));
+            set_gene_start_block_id(chromosome2Gene, get_gene_start_block_id(child2Gene));
+            set_gene_length(chromosome2Gene, get_gene_length(child2Gene));
+        }
+
+        set_chromosome_fitness(chromosome1, INFINITY);
+        set_chromosome_fitness(chromosome2, INFINITY);
+    }
+
+    free_chromosome(tempChromosome1);
+    free_chromosome(tempChromosome2);
+}
+
+chromosome_t* tournament(population_t* population){
+    size_t maxIndex = (size_t)rand() % POPULATION_SIZE;
+    chromosome_t* chromosome = *(population + maxIndex); //lo hice para flexear
+    double maxFitness = get_chromosome_fitness(chromosome);
+
+    for (size_t i = 1; i < TOURNAMENT_SIZE; i++){
+        size_t indexCheck = (size_t)rand() % POPULATION_SIZE;
+        chromosome_t* chromosomeCheck = *(population + indexCheck);
+        double fitnessCheck = get_chromosome_fitness(chromosomeCheck);
+
+        if (fitnessCheck < maxFitness){
+            maxFitness = fitnessCheck;
+            maxIndex = indexCheck;
+        }
+    }
+    return *(population + maxIndex);
+}
+
+void mutation_chromosome(chromosome_t* chromosome) {
+    double probability = (double)rand() / RAND_MAX;
+    if (probability >= MUTATION_PROBABILITY) {
+        return;
+    }
+
+    size_t geneCount = get_chromosome_gene_count(chromosome);
+    size_t groupStart = (size_t)rand() % geneCount;
+    gene_t* selectedGene = get_gene_at(chromosome, groupStart);
+    id_t dictationId = get_gene_dictation_id(selectedGene);
+
+    while (groupStart > 0) {
+        gene_t* previousGene = get_gene_at(chromosome, groupStart - 1);
+        if (get_gene_dictation_id(previousGene) != dictationId) {
+            break;
+        }
+        groupStart--;
+    }
+
+    size_t groupEnd = find_group_end(chromosome, groupStart);
+    subject_t* subject = query_subject(get_subject_id_from_gene(selectedGene));
+    if (subject == NULL) {
+        return;
+    }
+
+    chromosome_t* tempChromosome = clone_chromosome(chromosome);
+    if (tempChromosome == NULL) {
+        return;
+    }
+
+    if (randomize_dictation(tempChromosome, groupStart,
+            groupEnd - groupStart, get_subject_weekly_hours(subject)) &&
+        validate_chromosome_overlaps(tempChromosome)) {
+        for (size_t i = groupStart; i < groupEnd; i++) {
+            gene_t* chromosomeGene = get_gene_at(chromosome, i);
+            gene_t* mutatedGene = get_gene_at(tempChromosome, i);
+
+            set_gene_day(chromosomeGene, get_gene_day(mutatedGene));
+            set_gene_start_block_id(chromosomeGene,
+                get_gene_start_block_id(mutatedGene));
+            set_gene_length(chromosomeGene, get_gene_length(mutatedGene));
+        }
+
+        set_chromosome_fitness(chromosome, INFINITY);
+    }
+
+    free_chromosome(tempChromosome);
 }
