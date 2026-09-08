@@ -24,6 +24,7 @@ struct schedule_data_t {
     chart_t first_period;
     chart_t second_period;
 };
+
 struct com_id_t {
     char name[6];
 };
@@ -56,21 +57,17 @@ void get_comissions(schedule_file_t file, size_t* o_comissionCount, com_id_t** o
 void read_schedule_chart(xlsxioreadersheet sheet, schedule_data_t* o_schedule, size_t periodRowIndex, period_t period);
 int find_header(xlsxioreadersheet sheet, const char** headers, size_t headerCount);
 
-void get_schedule_for_comission(schedule_file_t file, com_id_t* comId, schedule_data_t** o_schedule) {
+schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comId) {
+    schedule_data_t* o_schedule = create_schedule();
     xlsxioreadersheet sheet = xlsxioread_sheet_open(file, comId->name, XLSXIOREAD_SKIP_EMPTY_ROWS);
-    size_t lastColumn = xlsxioread_sheet_last_column_index(sheet);
-    size_t lastRow = xlsxioread_sheet_last_row_index(sheet);
-    size_t rowIndex = 0;
-    size_t cellIndex = 0;
     size_t periodRowIndex = 0;
     period_t period = PERIOD_MAX_ENUM;
     reader_status_t status = READER_STATUS_WAITING_FOR_HEADER;
-    (*o_schedule) = create_schedule();
     const char* headers[2] = {
         "Primer Cuatrimestre",
         "Segundo Cuatrimestre"
     };
-    for (rowIndex = 0; xlsxioread_sheet_next_row(sheet); rowIndex++) {
+    while (xlsxioread_sheet_next_row(sheet)) {
         switch (status) {
         case READER_STATUS_WAITING_FOR_HEADER:
             int header = -1;
@@ -82,7 +79,7 @@ void get_schedule_for_comission(schedule_file_t file, com_id_t* comId, schedule_
             }  
             break;
         case READER_STATUS_READING_CHART:
-            read_schedule_chart(sheet, *o_schedule, periodRowIndex, period);
+            read_schedule_chart(sheet, o_schedule, periodRowIndex, period);
             periodRowIndex++;
             if(periodRowIndex >= (SCHEDULE_BLOCKS * 3)) 
                 status = period != PERIOD_SECOND ? READER_STATUS_WAITING_FOR_HEADER : READER_STATUS_FINISHED;
@@ -93,6 +90,7 @@ void get_schedule_for_comission(schedule_file_t file, com_id_t* comId, schedule_
         }
     }
     xlsxioread_sheet_close(sheet);
+    return o_schedule;
 }
 
 void read_schedule_chart(
@@ -207,4 +205,20 @@ void print_schedule(const schedule_data_t* schedule) {
         }
         printf("\n");
     }
+}
+
+
+
+
+size_t sizeof_com_id() {
+    return sizeof(com_id_t);
+}
+
+
+size_t get_schedule_day_count() {
+    return DAYS_OF_THE_WEEK;
+}
+
+size_t get_schedule_block_count() {
+    return SCHEDULE_BLOCKS;
 }
