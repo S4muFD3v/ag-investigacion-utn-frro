@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include "load/schedule_loader.h"
+#include "algGen.h"
 
 int main() {
-    srand((unsigned int)time(NULL));
+    srand(SEED);
 
     schedule_file_t file = open_file("C:/Users/PC/Downloads/horarios2do.xlsx");
 
