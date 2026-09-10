@@ -5,6 +5,7 @@
 #include "utils/memory.h"
 #include "load/schedule_loader.h"
 #include "db.h"
+#include "utils/compare.h"
 
 dynarr_t* enumerate_files();
 int64_t subject_exists_similar(char* subject, float match);
@@ -131,11 +132,25 @@ dynarr_t* enumerate_files() {
 	return sizeBytes;
 }
 
-
 int64_t subject_exists_similar(char* subject, float match) {
-	abort();
+	const size_t scount = get_subject_count();
+	for (size_t s = 0; s < scount; s++) {
+		subject_t* sub = get_subject_at(s);
+		const char* sname = get_subject_name(sub);
+		if (is_similar(sname, subject, 0.90))
+			return s;
+	}
+	return -1;
 }
 
 int64_t dictation_exists(id_t subject, id_t comission, id_t teacher) {
-	abort();
+	const size_t dcount = get_dictation_count();
+	for (size_t d = 0; d < dcount; d++) {
+		dictation_t* dic = get_dictation_at(d);
+		if (subject != get_dictation_subject_id(dic)) continue;
+		if (comission != get_dictation_comission_id(dic)) continue;
+		if (teacher != get_dictation_teacher_id(dic)) continue;
+		return d;
+	}
+	return -1;
 }
