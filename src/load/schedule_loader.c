@@ -116,6 +116,7 @@ void read_schedule_chart(
         const size_t newNameSize = cellSize + prevNameSize + 1;
         char* newName = calloc(cellSize + prevNameSize + 1, sizeof(char));
         strcat_s(newName, newNameSize, prevName);
+        strcat_s(newName, newNameSize, " ");
         strcat_s(newName, newNameSize, cellValue);
         xlsxioread_free(cellValue);
         set_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period, newName);
