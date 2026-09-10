@@ -6,25 +6,31 @@
 #include "load/schedule_loader.h"
 #include "db.h"
 #include "utils/compare.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 dynarr_t* enumerate_files();
 int64_t subject_exists_similar(char* subject, float match);
 int64_t dictation_exists(id_t subject, id_t comission, id_t teacher);
 
 chromosome_t* load_chromsome_from_files(const char* dataReadSubfolder) {
-	const size_t fileNameSizeBytes = sizeof(char) * 256;
-	const size_t yearStrSizeBytes = sizeof(char) * 4;
+	const size_t fileNameSizeBytes = 256;
+	const size_t yearStrSizeBytes = 4;
 	dynarr_t* files = enumerate_files();
 
-	char* fileFullName = malloc(fileNameSizeBytes);
-	char* yearStr = malloc(yearStrSizeBytes);
+	char* fileFullName = calloc(fileNameSizeBytes, sizeof(char));
+	char* yearStr = calloc(yearStrSizeBytes, sizeof(char));
 	
 	dynarr_t* geneList = init_dynamic_array(sizeof_gene(), 32);
 	for (size_t a = 0; a < dynamic_array_size(files); a++) {
-		*fileFullName = '\0';
-		strcat_s(fileFullName, fileNameSizeBytes, "data\\");
+		(*fileFullName) = '\0';
+		strcat_s(fileFullName, fileNameSizeBytes, dataReadSubfolder);
 		strcat_s(fileFullName, fileNameSizeBytes, (char*)at(files, a));
 		schedule_file_t* sfile = open_file(fileFullName);
+		if (sfile == NULL) {
+			printf("No se pudo abrir el archivo '%s'\n", fileFullName);
+			continue;
+		}
 		
 		// Get comissions
 		size_t comCount = 0;
@@ -34,9 +40,7 @@ chromosome_t* load_chromsome_from_files(const char* dataReadSubfolder) {
 		//Parsing comissions
 		for (size_t c = 0; c < comCount; c++) {
 			size_t comYear = a + 1;
-			comission_t* com = NULL;
-
-			com = create_comission();
+			comission_t* com = create_comission();
 
 			schedule_data_t* schedule = get_schedule_for_comission(
 				sfile, ((char*)comissions) + c * sizeof_com_id(), &schedule);
@@ -48,11 +52,15 @@ chromosome_t* load_chromsome_from_files(const char* dataReadSubfolder) {
 				size_t sessionBlockStart = 0;
 				gene_t* session = NULL;
 				id_t sessionSubjectId = 0;
+				id_t dicId = -1;
 				for (size_t b = 0; b < get_schedule_block_count(); b++) {
 					char* name = get_subjet_name_for_block(schedule, d, b, PERIOD_FIRST); // Por ahora solo 1er cuat
 					int64_t subjectIndx;
-					if ((subjectIndx = subject_exists_similar(name, 0.8 /* 80% match */)) < 0)
+					if (strlen(name) == 0) continue;
+					if ((subjectIndx = subject_exists_similar(name, 0.90 /* 80% match */)) < 0) {
+						printf("No existe la materia '%s'\n", name);
 						abort();
+					}
 					sessionSubjectId = get_subject_id(get_subject_at(subjectIndx));
 
 					subject_t* subject = get_subject_at(subject);
@@ -62,30 +70,32 @@ chromosome_t* load_chromsome_from_files(const char* dataReadSubfolder) {
 						lastSubject = subject;
 						sessionBlockStart = b;
 						session = push_slot(geneList);
+
+						size_t dictPos = dictation_exists(sessionSubjectId, c, 0);
+						if (dictPos < 0) {
+							dictation_t* dic = create_dictation();
+							set_dictation_subject_id(dic, sessionSubjectId);
+							set_dictation_comission_id(dic, c);
+							set_dictation_teacher_id(dic, 0);
+							dicId = get_dictation_id(dic);
+						}
+						else {
+							dicId = get_dictation_id(get_dictation_at(dictPos));
+						}
+
+						set_gene_start_block_id(session, sessionBlockStart);
+						set_gene_day(session, d);
+						set_gene_length(session, blockCount);
+						set_gene_dictation_id(session, get_dictation_id(dicId));
 					}
 					else {
 						// Misma sesion, incremento de horas
 						blockCount++;
+						set_gene_length(session, blockCount);
 					}
-				}
 
-				id_t dicId = 0;
-				size_t dictPos = dictation_exists(sessionSubjectId, c, 0);
-				if (dictPos < 0) {
-					dictation_t* dic = create_dictation();
-					set_dictation_subject_id(dic, sessionSubjectId);
-					set_dictation_comission_id(dic, c);
-					set_dictation_teacher_id(dic, 0);
-					dicId = get_dictation_id(dic);
+					
 				}
-				else {
-					dicId = get_dictation_id(get_dictation_at(dictPos));
-				}
-
-				set_gene_start_block_id(session, sessionBlockStart);
-				set_gene_day(session, d);
-				set_gene_length(session, blockCount);
-				set_gene_dictation_id(session, get_dictation_id(dicId));
 			}
 
 			delete_schedule(schedule);
@@ -129,7 +139,7 @@ dynarr_t* enumerate_files() {
 	strcpy_s(push_slot(files), sizeBytes, "horarios4to.xlsx");
 	strcpy_s(push_slot(files), sizeBytes, "horarios5to.xlsx");
 	strcpy_s(push_slot(files), sizeBytes, "horarios6to.xlsx");
-	return sizeBytes;
+	return files;
 }
 
 int64_t subject_exists_similar(char* subject, float match) {
@@ -137,7 +147,7 @@ int64_t subject_exists_similar(char* subject, float match) {
 	for (size_t s = 0; s < scount; s++) {
 		subject_t* sub = get_subject_at(s);
 		const char* sname = get_subject_name(sub);
-		if (is_similar(sname, subject, 0.90))
+		if (is_similar(sname, subject, match))
 			return s;
 	}
 	return -1;

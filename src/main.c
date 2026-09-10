@@ -3,21 +3,25 @@
 #include <stdlib.h>
 #include <time.h>
 #include "load/schedule_loader.h"
+#include "load/subjectLoader.h"
+#include "chromosomeLoader.h"
 #include "algGen.h"
+#include "db.h"
 
 int main() {
     srand(SEED);
+    init_db();
+
+    load_subjects("./in/subjects.csv");
 
     schedule_file_t file = open_file("C:/Users/PC/Downloads/horarios2do.xlsx");
 
-    size_t com_count;
-    com_id_t* comission_ids;
-    get_comissions(file, &com_count, &comission_ids);
+    chromosome_t* firstChromosome = load_chromsome_from_files("./in/");
 
-    schedule_data_t* sch;
-    get_schedule_for_comission(file, "2k01", &sch);
-    close_file(file);
-    print_schedule(sch);
-    delete_schedule(sch);
+    subject_t* ss = get_subject_at(0);
+    comission_t* coms = get_comission_at(0);
+    dictation_t* dicts = get_dictation_at(0);
+
+    terminate_db();
     return 0;
 }

@@ -30,7 +30,6 @@ struct com_id_t {
 };
 
 
-int list_page_callback(const XLSXIOCHAR* name, void* callbackdata);
 
 
 schedule_file_t open_file(const char* path) {
@@ -41,6 +40,7 @@ void close_file(schedule_file_t file) {
     xlsxioread_close(file);
 }
 
+int list_page_callback(const XLSXIOCHAR* name, void* callbackdata);
 
 void get_comissions(schedule_file_t file, size_t* o_comissionCount, com_id_t** o_comissionIds) {
     dynarr_t* data = init_dynamic_array(sizeof(com_id_t), 8);
@@ -49,8 +49,16 @@ void get_comissions(schedule_file_t file, size_t* o_comissionCount, com_id_t** o
     size_t newArrSizeBytes = comCount * sizeof(com_id_t);
     (*o_comissionCount) = comCount;
     (*o_comissionIds) = malloc(newArrSizeBytes);
-    dynamic_array_copy_to((void*)*o_comissionIds, newArrSizeBytes, data);
+    dynamic_array_copy_to(*o_comissionIds, newArrSizeBytes, data);
     free_dynamic_array(data);
+}
+
+int list_page_callback(const XLSXIOCHAR* name, void* callbackdata) {
+    dynarr_t* data = (dynarr_t*)callbackdata;
+    com_id_t* elem = (com_id_t*)push_slot(data);
+    memset(elem->name, '\0', 6 * sizeof(char));
+    memcpy_s(elem->name, 5, name, strlen(name));
+    return 0;
 }
 
 
@@ -150,16 +158,6 @@ void delete_schedule(const schedule_data_t* schedule) {
 
 
 
-
-
-
-int list_page_callback(const XLSXIOCHAR* name, void* callbackdata) {
-    dynarr_t* data = (dynarr_t*)callbackdata;
-    com_id_t* elem = (com_id_t*) push_slot(data);
-    memset(elem->name, '\0', 6 * sizeof(char));
-    memcpy_s(elem->name, 5, name, strlen(name));
-    return 0;
-}
 
 void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block, period_t period, char* name) {
     char* sub = NULL;

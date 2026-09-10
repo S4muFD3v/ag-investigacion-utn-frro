@@ -21,8 +21,8 @@ schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comI
 
 schedule_data_t* create_schedule(); // No deberia llamarse, usar get_schedule_for_comission sobre un doble puntero
 void delete_schedule(const schedule_data_t* schedule);
-void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, size_t period, char* name);
-char* get_subjet_name_for_block(const schedule_data_t* schedule, size_t day, size_t block, size_t period);
+void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, period_t period, char* name);
+char* get_subjet_name_for_block(const schedule_data_t* schedule, size_t day, size_t block, period_t period);
 void print_schedule(const schedule_data_t* schedule);
 
 size_t get_schedule_day_count();

@@ -205,3 +205,9 @@ fmp_t get_fmp_from_gene(const gene_t* gene) {
 
     return FMP_MAX_ENUM;
 }
+
+
+
+size_t sizeof_gene() {
+    return sizeof(gene_t);
+}
