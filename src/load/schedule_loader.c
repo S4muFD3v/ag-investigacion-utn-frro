@@ -106,6 +106,8 @@ void read_schedule_chart(
     const size_t blockIndex = periodRowIndex / 3;
     char* cellValue;
     size_t cellIndex = 0;
+    const size_t newNameSize = 256;
+    char* newName = calloc(newNameSize, sizeof(char));
     for (cellIndex = 0; (cellValue = xlsxioread_sheet_next_cell(sheet)) != NULL; cellIndex++) {
         const size_t dayIndex = cellIndex - 2;
         SKIP_RANGE(cellIndex, 0, 2);
@@ -113,15 +115,17 @@ void read_schedule_chart(
         char* prevName = get_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period);
         const size_t cellSize = strlen(cellValue) * sizeof(char);
         const size_t prevNameSize = strlen(prevName) * sizeof(char);
-        const size_t newNameSize = cellSize + prevNameSize + 1;
-        char* newName = calloc(cellSize + prevNameSize + 1, sizeof(char));
-        strcat_s(newName, newNameSize, prevName);
-        strcat_s(newName, newNameSize, " ");
-        strcat_s(newName, newNameSize, cellValue);
+        newName[0] = '\0';
+        if (strlen(cellValue) != 0) {
+            strcat_s(newName, 256, prevName);
+            if(strlen(prevName) != 0)
+                strcat_s(newName, 256, " ");
+            strcat_s(newName, 256, cellValue);
+        }
         xlsxioread_free(cellValue);
         set_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period, newName);
-        free(newName);
     }
+    free(newName);
 }
 
 int find_header(xlsxioreadersheet sheet, const char** headers, size_t headerCount) {

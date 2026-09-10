@@ -63,7 +63,7 @@ chromosome_t* load_chromsome_from_files(const char* dataReadSubfolder) {
 					}
 					sessionSubjectId = get_subject_id(get_subject_at(subjectIndx));
 
-					subject_t* subject = get_subject_at(subject);
+					subject_t* subject = get_subject_at(subjectIndx);
 					if (lastSubject == NULL || get_subject_id(lastSubject) != get_subject_id(subject)) {
 						// Nueva sesion
 						blockCount = 1;
