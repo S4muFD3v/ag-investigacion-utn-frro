@@ -31,6 +31,8 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
+    double firstFitness = fitness_function(population, 0);
+
     for (size_t r = 0; r < ROLL_COUNT; r++) {
         for(size_t i = 0; i < POPULATION_SIZE; i++) {
             set_chromosome_fitness(population[i], fitness_function(population, i));
@@ -72,7 +74,7 @@ int main(void) {
         set_chromosome_fitness(population[i], fitness);
         if (fitness < bestFitness) bestFitness = fitness;
     }
-    printf("Mejor fitness de la ultima generacion: %.6f\n", bestFitness);
+    printf("Mejor fitness de la ultima generacion: %.6f\n primer fitness: %.6f\n", bestFitness, firstFitness);
     free_population(population);
 
     terminate_db();

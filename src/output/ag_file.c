@@ -1,6 +1,7 @@
 #include "ag_file.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef C_GENE_COUNT
     #define C_GENE_COUNT 0

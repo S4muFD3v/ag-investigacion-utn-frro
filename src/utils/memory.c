@@ -1,6 +1,7 @@
 #include "memory.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 struct dynarr_t {
     void* ptr;
@@ -26,7 +27,6 @@ void free_dynamic_array(dynarr_t* array) {
 
 eptr_t push_slot(dynarr_t* array) {
     size_t newSize = array->size + 1;
-    eptr_t eptr = NULL;
     if(newSize <= array->capacity) { //aca no tendria que ser <= ? vos habias puesto <, por eso pregunto
         array->size = newSize;
     } else {
@@ -58,5 +58,12 @@ size_t dynamic_array_capacity(dynarr_t* array) {
 }
 
 void dynamic_array_copy_to(void* dest, size_t destSizeBytes, dynarr_t* array) {
-    memcpy_s(dest, destSizeBytes, array->ptr, array->size * array->elementSize);
+    size_t copySizeBytes = array->size * array->elementSize;
+    if (copySizeBytes > destSizeBytes) {
+        fprintf(stderr, "El destino es demasiado pequeno para copiar el arreglo.\n");
+        abort();
+    }
+    if (copySizeBytes != 0) {
+        memcpy(dest, array->ptr, copySizeBytes);
+    }
 }

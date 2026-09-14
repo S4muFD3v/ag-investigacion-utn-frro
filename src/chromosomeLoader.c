@@ -261,12 +261,13 @@ int64_t subject_exists_similar(const char *subject, float match)
 	{
 		subject_t *sub = get_subject_at(s);
 		const char *sname = get_subject_name(sub);
-		int dis = levenshtein_distance(subject, sub);
+		int dis = levenshtein_distance(subject, sname);
+		if (dis < 0) continue;
 		size_t l1 = strlen(subject);
-		size_t l2 = strlen(sub);
-		size_t ldif = l1 > l2 ? abs((int64_t)l1 - (int64_t)l2) : 0;
+		size_t l2 = strlen(sname);
+		size_t ldif = l1 > l2 ? l1 - l2 : 0;
 		if (((double)l2 / (double)(dis - ldif)) >= match)
-			return s;
+			return (int64_t)s;
 	}
 	return -1;
 }
@@ -284,6 +285,7 @@ int levenshtein_distance(const char *s1, const char *s2) {
     int len1 = strlen(s1);
     int len2 = strlen(s2);
     int* matrix = calloc((len1 + 1)*(len2 + 1), sizeof(int));
+    if (matrix == NULL) return -1;
 
     for (int i = 0; i <= len1; i++) matrix[__indx(i, 0, len1 + 1)] = i;
     for (int j = 0; j <= len2; j++) matrix[__indx(0, j, len1 + 1)] = j;
@@ -298,7 +300,9 @@ int levenshtein_distance(const char *s1, const char *s2) {
             );
         }
     }
-    return matrix[__indx(len1, len2, len1 + 1)];
+    int distance = matrix[__indx(len1, len2, len1 + 1)];
+    free(matrix);
+    return distance;
 }
 
 int64_t dictation_exists(id_t subject, id_t comission, id_t teacher)
