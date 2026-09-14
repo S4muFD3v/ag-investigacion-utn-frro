@@ -15,6 +15,7 @@ struct com_subjects_t {
 
 struct comission_t {
     id_t id;
+    char name[COMISSION_NAME_MAX_LENGTH];
     size_t year;
     schedule_t first_period;
 
@@ -101,6 +102,17 @@ id_t get_comission_id(comission_t* comission) {
 
 void set_comission_id(comission_t* comission, id_t id) {
     comission->id = id;
+}
+
+char* get_comission_name(comission_t* comission) {
+    return comission->name;
+}
+
+void set_comission_name(comission_t* comission, const char* name) {
+    if (name == NULL) abort();
+
+    strncpy(comission->name, name, COMISSION_NAME_MAX_LENGTH - 1);
+    comission->name[COMISSION_NAME_MAX_LENGTH - 1] = '\0';
 }
 
 size_t get_comission_year(comission_t* comission) {

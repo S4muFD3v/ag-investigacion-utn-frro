@@ -32,6 +32,10 @@ struct com_id_t {
     char name[6];
 };
 
+const char* get_com_id_name(const com_id_t* comId) {
+    return comId->name;
+}
+
 
 
 

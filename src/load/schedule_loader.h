@@ -17,6 +17,7 @@ typedef struct com_id_t com_id_t;
 schedule_file_t open_file(const char* path);
 void close_file(schedule_file_t file);
 void get_comissions(schedule_file_t file, size_t* o_comissionCount, com_id_t** o_comissionIds);
+const char* get_com_id_name(const com_id_t* comId);
 schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comId);
 
 schedule_data_t* create_schedule();

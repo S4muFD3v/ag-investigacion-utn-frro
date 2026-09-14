@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <ctype.h>
 
 dynarr_t *enumerate_files();
 int64_t subject_exists_similar(const char *subject, float match);
@@ -20,6 +21,7 @@ static void load_period(schedule_data_t *schedule, period_t period,
 static com_subjects_t *register_subject_period(comission_t *comission,
 	id_t subjectId, period_t period);
 static int same_period_schedule(const schedule_data_t *schedule, id_t subjectId);
+static int is_registration_note(const char *name);
 
 chromosome_t *load_chromsome_from_files(const char *dataReadSubfolder)
 {
@@ -49,14 +51,16 @@ chromosome_t *load_chromsome_from_files(const char *dataReadSubfolder)
 		for (size_t c = 0; c < comCount; c++)
 		{
 			size_t comYear = a + 1;
+			com_id_t *comId = (com_id_t *)(((char *)comissions) + c * sizeof_com_id());
 			schedule_data_t *schedule = get_schedule_for_comission(
-				sfile, (com_id_t *)(((char *)comissions) + c * sizeof_com_id()));
+				sfile, comId);
 			if (schedule == NULL) {
 				continue;
 			}
 
 			comission_t *com = create_comission();
 			set_comission_id(com, (id_t)(get_comission_count() - 1));
+			set_comission_name(com, get_com_id_name(comId));
 			set_comission_year(com, comYear);
 			set_comission_schedule(com, get_comission_schedule_time(schedule));
 
@@ -112,10 +116,17 @@ static void load_period(schedule_data_t *schedule, period_t period,
 		{
 			const char *name = get_subjet_name_for_block(schedule, d, b, period);
 			int64_t subjectIndx;
-			if (strlen(name) == 0) {
-				lastSubject = NULL;
-				continue;
-			}
+				if (strlen(name) == 0) {
+					lastSubject = NULL;
+					continue;
+				}
+				if (is_registration_note(name)) {
+					fprintf(stderr, "Aviso: comision %s, cuatrimestre %d, dia %zu, "
+						"bloque %zu: '%s' es una indicacion de inscripcion, no una materia.\n",
+						get_comission_name(comission), period + 1, d, b, name);
+					lastSubject = NULL;
+					continue;
+				}
 			if ((subjectIndx = subject_exists_similar(name, 0.90)) < 0)
 			{
 				printf("No existe la materia '%s'\n", name);
@@ -206,7 +217,7 @@ static int same_period_schedule(const schedule_data_t *schedule, id_t subjectId)
 			for (size_t period = 0; period < 2; period++) {
 				const char *name = get_subjet_name_for_block(schedule, day, block,
 					(period_t)period);
-				if (name[0] != '\0') {
+				if (name[0] != '\0' && !is_registration_note(name)) {
 					int64_t position = subject_exists_similar(name, 0.90);
 					occupied[period] = position >= 0 &&
 						get_subject_id(get_subject_at((size_t)position)) == subjectId;
@@ -248,28 +259,83 @@ int min3(int a, int b, int c);
 
 int levenshtein_distance(const char *s1, const char *s2);
 
+static void normalize_subject_name(const char *name, char *normalized,
+	size_t capacity, size_t *sourceEnds) {
+	const unsigned char *p = (const unsigned char *)name;
+	size_t length = 0;
+	while (*p != '\0' && *p != '(' && length < capacity - 1) {
+		// Los Excel abrevian "Sistemas" como "Sist." en cuarto y quinto.
+		if ((p == (const unsigned char *)name || !isalnum(p[-1])) &&
+			tolower(p[0]) == 's' && tolower(p[1]) == 'i' &&
+			tolower(p[2]) == 's' && tolower(p[3]) == 't' && p[4] == '.' &&
+			length + 8 < capacity) {
+			p += 5;
+			memcpy(normalized + length, "sistemas", 8);
+			for (size_t i = 0; i < 8; i++) {
+				if (sourceEnds != NULL) sourceEnds[length + i] = (size_t)((const char *)p - name);
+			}
+			length += 8;
+			continue;
+		}
+		unsigned char c = *p++;
+		// Plegado de letras espanolas UTF-8, independiente del locale del sistema.
+		if (c == 0xc3 && *p != '\0') {
+			switch (*p++) {
+				case 0x81: case 0xa1: c = 'a'; break;
+				case 0x89: case 0xa9: c = 'e'; break;
+				case 0x8d: case 0xad: c = 'i'; break;
+				case 0x93: case 0xb3: c = 'o'; break;
+				case 0x9a: case 0xba: case 0x9c: case 0xbc: c = 'u'; break;
+				case 0x91: case 0xb1: c = 'n'; break;
+				default: c = 0; break;
+			}
+		}
+		if (c < 128 && isalnum(c)) {
+			normalized[length] = (char)tolower(c);
+			if (sourceEnds != NULL) sourceEnds[length] = (size_t)((const char *)p - name);
+			length++;
+		}
+	}
+	normalized[length] = '\0';
+}
+
+static int is_registration_note(const char *name) {
+	char normalized[2 * SUBJECT_NAME_MAX_LENGTH];
+	normalize_subject_name(name, normalized, sizeof(normalized), NULL);
+	const char *prefix = "inscribirseenlacomision";
+	return strncmp(normalized, prefix, strlen(prefix)) == 0;
+}
 
 int64_t subject_exists_similar(const char *subject, float match)
 {
+	(void)match;
 	const size_t scount = get_subject_count();
 	for (size_t s = 0; s < scount; s++) {
 		if (strcmp(get_subject_name(get_subject_at(s)), subject) == 0) {
 			return (int64_t)s;
 		}
 	}
-	for (size_t s = 0; s < scount; s++)
-	{
-		subject_t *sub = get_subject_at(s);
-		const char *sname = get_subject_name(sub);
-		int dis = levenshtein_distance(subject, sname);
-		if (dis < 0) continue;
-		size_t l1 = strlen(subject);
-		size_t l2 = strlen(sname);
-		size_t ldif = l1 > l2 ? l1 - l2 : 0;
-		if (((double)l2 / (double)(dis - ldif)) >= match)
-			return (int64_t)s;
+	char normalized[2 * SUBJECT_NAME_MAX_LENGTH];
+	size_t sourceEnds[2 * SUBJECT_NAME_MAX_LENGTH];
+	normalize_subject_name(subject, normalized, sizeof(normalized), sourceEnds);
+	int64_t found = -1;
+	size_t longestName = 0;
+	// El nombre completo debe estar al inicio; el resto puede ser el profesor.
+	for (size_t s = 0; s < scount; s++) {
+		char candidate[2 * SUBJECT_NAME_MAX_LENGTH];
+		normalize_subject_name(get_subject_name(get_subject_at(s)), candidate,
+			sizeof(candidate), NULL);
+		size_t length = strlen(candidate);
+		if (length <= longestName || strncmp(normalized, candidate, length) != 0) continue;
+		const unsigned char *next = (const unsigned char *)subject + sourceEnds[length - 1];
+		// Este limite de palabra impide que "Fisica II" coincida con "Fisica I".
+		if (*next == '\0' || isspace(*next) || ispunct(*next) ||
+			(next[0] == 0xc2 && next[1] == 0xa0)) {
+			found = (int64_t)s;
+			longestName = length;
+		}
 	}
-	return -1;
+	return found;
 }
 
 int min3(int a, int b, int c) {

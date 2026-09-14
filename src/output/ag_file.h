@@ -3,6 +3,9 @@
 
 #include "../chromosome.h"
 
+/* Crea <filePrefix>_anio_<N>.csv con las grillas del cromosoma. */
+int export_timetable_by_year(chromosome_t* chromosome, const char* filePrefix);
+
 void init(const char* fileName);
 void init_roll(size_t roll);
 

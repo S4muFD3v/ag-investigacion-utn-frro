@@ -115,9 +115,15 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
 }
 
 static int randomize_dictation(chromosome_t* chromosome,
-    size_t firstPosition, size_t potentialSessionCount, size_t weeklyBlocks) {
+    size_t firstPosition, size_t potentialSessionCount) {
     if (potentialSessionCount == 0) {
         return 0;
+    }
+
+    // Conservamos la carga del dictado cargada desde el Excel de horarios.
+    size_t weeklyBlocks = 0;
+    for (size_t i = 0; i < potentialSessionCount; i++) {
+        weeklyBlocks += get_gene_length(get_gene_at(chromosome, firstPosition + i));
     }
 
     if (weeklyBlocks == 0) {
@@ -250,9 +256,18 @@ int create_first_population(population_t* population) {
         }
 
         size_t groupStart = 0;
+        size_t comissionStart = 0;
+        size_t comissionAttempts = 0;
+        id_t currentComissionId = -1;
 
         while (groupStart < geneCount) {
             gene_t* firstGroupGene = get_gene_at(population[i], groupStart);
+            id_t comissionId = get_comission_id_from_gene(firstGroupGene);
+            if (comissionId != currentComissionId) {
+                currentComissionId = comissionId;
+                comissionStart = groupStart;
+                comissionAttempts = 0;
+            }
             id_t dictationId = get_gene_dictation_id(firstGroupGene);
             size_t groupEnd = groupStart + 1;
 
@@ -267,11 +282,26 @@ int create_first_population(population_t* population) {
             dictation_t* dictation = query_dictation(dictationId);
             subject_t* subject = dictation == NULL ? NULL : query_subject(get_dictation_subject_id(dictation));
 
-            if (subject == NULL || !randomize_dictation(population[i], groupStart,
-                (groupEnd - groupStart), get_subject_weekly_hours(subject))) {
+            if (subject == NULL) {
                 free_chromosome(population[i]);
                 population[i] = NULL;
                 return 0;
+            }
+            if (!randomize_dictation(population[i], groupStart, groupEnd - groupStart)) {
+                if (++comissionAttempts >= MAX_RANDOMIZATION_ATTEMPTS) {
+                    free_chromosome(population[i]);
+                    population[i] = NULL;
+                    return 0;
+                }
+                // Reintentamos la comision si las asignaciones previas la bloquearon.
+                for (size_t j = comissionStart; j < groupEnd; j++) {
+                    gene_t* original = get_gene_at(population[0], j);
+                    init_gene(get_gene_at(population[i], j), get_gene_dictation_id(original),
+                        get_gene_day(original), get_gene_start_block_id(original),
+                        get_gene_length(original));
+                }
+                groupStart = comissionStart;
+                continue;
             }
 
             groupStart = groupEnd;
@@ -865,7 +895,7 @@ void mutation_chromosome(chromosome_t* chromosome) {
     }
 
     if (randomize_dictation(tempChromosome, groupStart,
-            groupEnd - groupStart, get_subject_weekly_hours(subject)) &&
+            groupEnd - groupStart) &&
         validate_chromosome_overlaps(tempChromosome)) {
         for (size_t i = groupStart; i < groupEnd; i++) {
             gene_t* chromosomeGene = get_gene_at(chromosome, i);

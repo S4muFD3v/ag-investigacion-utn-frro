@@ -5,6 +5,7 @@
 
 #define SUBJECT_NAME_MAX_LENGTH 256
 #define TEACHER_NAME_MAX_LENGTH 256
+#define COMISSION_NAME_MAX_LENGTH 32
 
 typedef long long int id_t;
 typedef struct subject_t subject_t;
@@ -57,6 +58,9 @@ size_t sizeof_com_subject();
 
 id_t get_comission_id(comission_t* comission);
 void set_comission_id(comission_t* comission, id_t id);
+
+char* get_comission_name(comission_t* comission);
+void set_comission_name(comission_t* comission, const char* name);
 
 size_t get_comission_year(comission_t* comission);
 void set_comission_year(comission_t* comission, size_t year);

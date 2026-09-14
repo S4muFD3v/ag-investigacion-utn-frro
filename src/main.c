@@ -7,6 +7,7 @@
 #include "algGen.h"
 #include "db.h"
 #include "output/fitness_file.h"
+#include "output/ag_file.h"
 
 #define ROLL_COUNT 300
 
@@ -104,18 +105,30 @@ int main(void) {
         }
     }
 
-    double bestFitness = INFINITY;
-    for (size_t i = 0; i < POPULATION_SIZE; i++) {
+    size_t bestIndex = 0;
+    double bestFitness = get_chromosome_fitness(population[0]);
+    for (size_t i = 1; i < POPULATION_SIZE; i++) {
         double fitness = get_chromosome_fitness(population[i]);
-        if (fitness < bestFitness) bestFitness = fitness;
+        if (fitness < bestFitness) {
+            bestFitness = fitness;
+            bestIndex = i;
+        }
     }
     printf("Mejor fitness de la ultima generacion: %.6f\n primer fitness: %.6f\n", bestFitness, firstFitness);
     int csvClosed = close_fitness_file();
+    char timetablePrefix[160];
+    snprintf(timetablePrefix, sizeof(timetablePrefix),
+        "./output/horarios_%s_seed_%u", timestamp, (unsigned int)SEED);
+    int timetableExported = export_timetable_by_year(population[bestIndex], timetablePrefix);
     free_population(population);
 
     terminate_db();
     if (!csvClosed) {
         fprintf(stderr, "No se pudo cerrar correctamente el CSV del fitness.\n");
+        return EXIT_FAILURE;
+    }
+    if (!timetableExported) {
+        fprintf(stderr, "No se pudieron exportar todos los horarios.\n");
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
