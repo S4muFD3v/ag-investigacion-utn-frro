@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "load/subjectLoader.h"
 #include "chromosomeLoader.h"
 #include "algGen.h"
 #include "db.h"
+#include "output/fitness_file.h"
 
 #define ROLL_COUNT 300
 
@@ -31,16 +33,39 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    double firstFitness = fitness_function(population, 0);
+    for (size_t i = 0; i < POPULATION_SIZE; i++) {
+        set_chromosome_fitness(population[i], fitness_function(population, i));
+    }
+    double firstFitness = get_chromosome_fitness(population[0]);
+
+    char fitnessFilename[160];
+    time_t now = time(NULL);
+    char timestamp[32];
+    struct tm* runTime = localtime(&now);
+    if (runTime == NULL || strftime(timestamp, sizeof(timestamp),
+            "%Y%m%d_%H%M%S", runTime) == 0) {
+        fprintf(stderr, "No se pudo obtener la fecha para el CSV del fitness.\n");
+        free_population(population);
+        terminate_db();
+        return EXIT_FAILURE;
+    }
+    snprintf(fitnessFilename, sizeof(fitnessFilename),
+        "./output/fitness_%s_seed_%u.csv", timestamp, (unsigned int)SEED);
+    if (!open_fitness_file(fitnessFilename, (unsigned int)SEED, firstFitness) ||
+        !write_fitness_roll(population, 0)) {
+        fprintf(stderr, "No se pudo crear el CSV del fitness '%s'.\n", fitnessFilename);
+        close_fitness_file();
+        free_population(population);
+        terminate_db();
+        return EXIT_FAILURE;
+    }
+    printf("Evolucion del fitness: %s\n", fitnessFilename);
 
     for (size_t r = 0; r < ROLL_COUNT; r++) {
-        for(size_t i = 0; i < POPULATION_SIZE; i++) {
-            set_chromosome_fitness(population[i], fitness_function(population, i));
-        }
-
         population_t* newPopulation = calloc(POPULATION_SIZE, sizeof(*newPopulation));
         if (newPopulation == NULL) {
             fprintf(stderr, "No se pudo reservar memoria para la nueva poblacion.\n");
+            close_fitness_file();
             free_population(population);
             terminate_db();
             return EXIT_FAILURE;
@@ -53,6 +78,7 @@ int main(void) {
             newPopulation[i+1] = clone_chromosome(selected2);
             if (newPopulation[i] == NULL || newPopulation[i+1] == NULL) {
                 fprintf(stderr, "No se pudieron clonar los padres seleccionados.\n");
+                close_fitness_file();
                 free_population(newPopulation);
                 free_population(population);
                 terminate_db();
@@ -64,19 +90,33 @@ int main(void) {
             mutation_chromosome(newPopulation[i+1]);
         }
 
+        for (size_t i = 0; i < POPULATION_SIZE; i++) {
+            set_chromosome_fitness(newPopulation[i], fitness_function(newPopulation, i));
+        }
         free_population(population);
         population = newPopulation;
+        if (!write_fitness_roll(population, r + 1)) {
+            fprintf(stderr, "No se pudo escribir el roll %zu en el CSV del fitness.\n", r + 1);
+            close_fitness_file();
+            free_population(population);
+            terminate_db();
+            return EXIT_FAILURE;
+        }
     }
 
     double bestFitness = INFINITY;
     for (size_t i = 0; i < POPULATION_SIZE; i++) {
-        double fitness = fitness_function(population, i);
-        set_chromosome_fitness(population[i], fitness);
+        double fitness = get_chromosome_fitness(population[i]);
         if (fitness < bestFitness) bestFitness = fitness;
     }
     printf("Mejor fitness de la ultima generacion: %.6f\n primer fitness: %.6f\n", bestFitness, firstFitness);
+    int csvClosed = close_fitness_file();
     free_population(population);
 
     terminate_db();
+    if (!csvClosed) {
+        fprintf(stderr, "No se pudo cerrar correctamente el CSV del fitness.\n");
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
