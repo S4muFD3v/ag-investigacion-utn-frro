@@ -8,6 +8,7 @@
 #include "utils/compare.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 dynarr_t *enumerate_files();
 int64_t subject_exists_similar(const char *subject, float match);
@@ -239,9 +240,14 @@ dynarr_t *enumerate_files()
 	snprintf(push_slot(files), sizeBytes, "%s", "horarios3ro.xlsx");
 	snprintf(push_slot(files), sizeBytes, "%s", "horarios4to.xlsx");
 	snprintf(push_slot(files), sizeBytes, "%s", "horarios5to.xlsx");
-	snprintf(push_slot(files), sizeBytes, "%s", "horarios6to.xlsx");
 	return files;
 }
+
+// Helper function to find the minimum of three values
+int min3(int a, int b, int c);
+
+int levenshtein_distance(const char *s1, const char *s2);
+
 
 int64_t subject_exists_similar(const char *subject, float match)
 {
@@ -255,10 +261,44 @@ int64_t subject_exists_similar(const char *subject, float match)
 	{
 		subject_t *sub = get_subject_at(s);
 		const char *sname = get_subject_name(sub);
-		if (is_similar(sname, subject, match))
+		int dis = levenshtein_distance(subject, sub);
+		size_t l1 = strlen(subject);
+		size_t l2 = strlen(sub);
+		size_t ldif = l1 > l2 ? abs((int64_t)l1 - (int64_t)l2) : 0;
+		if (((double)l2 / (double)(dis - ldif)) >= match)
 			return s;
 	}
 	return -1;
+}
+
+int min3(int a, int b, int c) {
+    if (a < b && a < c) return a;
+    return (b < c) ? b : c;
+}
+
+size_t __indx(size_t x, size_t y, size_t w) {
+	return x + y * w;
+}
+
+int levenshtein_distance(const char *s1, const char *s2) {
+    int len1 = strlen(s1);
+    int len2 = strlen(s2);
+    int* matrix = calloc((len1 + 1)*(len2 + 1), sizeof(int));
+
+    for (int i = 0; i <= len1; i++) matrix[__indx(i, 0, len1 + 1)] = i;
+    for (int j = 0; j <= len2; j++) matrix[__indx(0, j, len1 + 1)] = j;
+
+    for (int i = 1; i <= len1; i++) {
+        for (int j = 1; j <= len2; j++) {
+            int cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+            matrix[__indx(i, j, len1 + 1)] = min3(
+                matrix[__indx(i - 1, j, len1 + 1)] + 1,     // Deletion
+                matrix[__indx(i, j - 1, len1 + 1)] + 1,     // Insertion
+                matrix[__indx(i - 1, j - 1, len1 + 1)] + cost // Substitution
+            );
+        }
+    }
+    return matrix[__indx(len1, len2, len1 + 1)];
 }
 
 int64_t dictation_exists(id_t subject, id_t comission, id_t teacher)
