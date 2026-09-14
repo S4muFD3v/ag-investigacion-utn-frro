@@ -67,7 +67,7 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
 
     gene_t* firstGene = get_gene_at(chromosome, firstPosition);
     id_t comissionId = get_comission_id_from_gene(firstGene);
-    id_t teacherId = get_teacher_id_from_gene(firstGene);
+//    id_t teacherId = get_teacher_id_from_gene(firstGene);
     fmp_t fmp = get_fmp_from_gene(firstGene);
 
     for (size_t i = firstPosition; i < lastPosition; i++) {
@@ -84,10 +84,10 @@ static int validation_overlaps(chromosome_t* chromosome, size_t firstPosition, s
         id_t comissionIdCheck = get_comission_id_from_gene(geneCheck);
         id_t startBlockIdCheck = local_to_global_block(comissionIdCheck, get_gene_start_block_id(geneCheck));
         size_t lengthCheck = get_gene_length(geneCheck);
-        id_t teacherIdCheck = get_teacher_id_from_gene(geneCheck);
+//        id_t teacherIdCheck = get_teacher_id_from_gene(geneCheck);
         fmp_t fmpCheck = get_fmp_from_gene(geneCheck);
         
-        if ((comissionIdCheck == comissionId || teacherIdCheck == teacherId) &&
+        if ((comissionIdCheck == comissionId /*|| teacherIdCheck == teacherId*/) &&
             share_academic_period(fmp, fmpCheck)) {
             for (size_t k = 0; k < size; k++) {
                 if (lengthCheck == 0 || length[k] == 0) {

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "../utils/memory.h"
 
 #define SKIP_RANGE(val, minVal, maxVal) if(val >= minVal && val < maxVal) continue
@@ -16,11 +17,13 @@ typedef char chart_t[DAYS_OF_THE_WEEK][SCHEDULE_BLOCKS][SUBJECT_NAME_MAX_LENGTH]
 
 typedef enum {
     READER_STATUS_WAITING_FOR_HEADER,
+    READER_STATUS_READING_TIME,
     READER_STATUS_READING_CHART,
     READER_STATUS_FINISHED,
 } reader_status_t;
 
 struct schedule_data_t {
+    size_t time;
     chart_t first_period;
     chart_t second_period;
 };
@@ -57,35 +60,53 @@ int list_page_callback(const XLSXIOCHAR* name, void* callbackdata) {
     dynarr_t* data = (dynarr_t*)callbackdata;
     com_id_t* elem = (com_id_t*)push_slot(data);
     memset(elem->name, '\0', 6 * sizeof(char));
-    memcpy_s(elem->name, 5, name, strlen(name));
+    snprintf(elem->name, sizeof(elem->name), "%s", name);
     return 0;
 }
 
 
 void read_schedule_chart(xlsxioreadersheet sheet, schedule_data_t* o_schedule, size_t periodRowIndex, period_t period);
 int find_header(xlsxioreadersheet sheet, const char** headers, size_t headerCount);
+static void read_schedule_time(xlsxioreadersheet sheet, schedule_data_t* schedule);
 
 schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comId) {
     schedule_data_t* o_schedule = create_schedule();
     xlsxioreadersheet sheet = xlsxioread_sheet_open(file, comId->name, XLSXIOREAD_SKIP_EMPTY_ROWS);
+    if (sheet == NULL || o_schedule == NULL) {
+        if (sheet != NULL) xlsxioread_sheet_close(sheet);
+        delete_schedule(o_schedule);
+        return NULL;
+    }
     size_t periodRowIndex = 0;
     period_t period = PERIOD_MAX_ENUM;
     reader_status_t status = READER_STATUS_WAITING_FOR_HEADER;
-    const char* headers[2] = {
+    const char* headers[3] = {
         "Primer Cuatrimestre",
-        "Segundo Cuatrimestre"
+        "Segundo Cuatrimestre",
+        "Turno"
     };
     while (xlsxioread_sheet_next_row(sheet)) {
         switch (status) {
         case READER_STATUS_WAITING_FOR_HEADER:
             int header = -1;
-            if ((header = find_header(sheet, headers, 2)) >= 0) {
-                status = READER_STATUS_READING_CHART;
-                period = (period_t) header;
-                periodRowIndex = 0;
-                xlsxioread_sheet_next_row(sheet); // Skip one rows
-            }  
+            if ((header = find_header(sheet, headers, 3)) >= 0) {
+                if(header == 2) {
+                    read_schedule_time(sheet, o_schedule);
+                    status = o_schedule->time == (size_t)-1
+                        ? READER_STATUS_READING_TIME : READER_STATUS_WAITING_FOR_HEADER;
+                } else {
+                    status = READER_STATUS_READING_CHART;
+                    period = (period_t) header;
+                    periodRowIndex = 0;
+                    xlsxioread_sheet_next_row(sheet); // Skip one row
+                }
+            }
             break;
+        case READER_STATUS_READING_TIME:
+            read_schedule_time(sheet, o_schedule);
+            status = o_schedule->time == (size_t)-1
+                ? READER_STATUS_READING_TIME : READER_STATUS_WAITING_FOR_HEADER;
+        break;
         case READER_STATUS_READING_CHART:
             read_schedule_chart(sheet, o_schedule, periodRowIndex, period);
             periodRowIndex++;
@@ -101,6 +122,20 @@ schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comI
     return o_schedule;
 }
 
+static void read_schedule_time(xlsxioreadersheet sheet, schedule_data_t* schedule) {
+    char* cell;
+    while ((cell = xlsxioread_sheet_next_cell(sheet)) != NULL) {
+        if (strcmp(cell, "Mañana") == 0) {
+            schedule->time = 0;
+        } else if (strcmp(cell, "Tarde") == 0) {
+            schedule->time = 1;
+        } else if (strcmp(cell, "Noche") == 0) {
+            schedule->time = 2;
+        }
+        xlsxioread_free(cell);
+    }
+}
+
 void read_schedule_chart(
     xlsxioreadersheet sheet, schedule_data_t* o_schedule, size_t periodRowIndex, period_t period) {
     const size_t blockIndex = periodRowIndex / 3;
@@ -109,19 +144,14 @@ void read_schedule_chart(
     const size_t newNameSize = 256;
     char* newName = calloc(newNameSize, sizeof(char));
     for (cellIndex = 0; (cellValue = xlsxioread_sheet_next_cell(sheet)) != NULL; cellIndex++) {
-        const size_t dayIndex = cellIndex - 2;
-        SKIP_RANGE(cellIndex, 0, 2);
-        SKIP_RANGE(dayIndex, 5, 1000000);
-        char* prevName = get_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period);
-        const size_t cellSize = strlen(cellValue) * sizeof(char);
-        const size_t prevNameSize = strlen(prevName) * sizeof(char);
-        newName[0] = '\0';
-        if (strlen(cellValue) != 0) {
-            strcat_s(newName, 256, prevName);
-            if(strlen(prevName) != 0)
-                strcat_s(newName, 256, " ");
-            strcat_s(newName, 256, cellValue);
+        if (cellIndex < 2 || cellIndex - 2 >= DAYS_OF_THE_WEEK || cellValue[0] == '\0') {
+            xlsxioread_free(cellValue);
+            continue;
         }
+        const size_t dayIndex = cellIndex - 2;
+        const char* prevName = get_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period);
+        snprintf(newName, newNameSize, "%s%s%s", prevName,
+            prevName[0] == '\0' ? "" : " ", cellValue);
         xlsxioread_free(cellValue);
         set_subjet_name_for_block(o_schedule, dayIndex, blockIndex, period, newName);
     }
@@ -148,10 +178,11 @@ int find_header(xlsxioreadersheet sheet, const char** headers, size_t headerCoun
 
 schedule_data_t* create_schedule() {
     schedule_data_t* sch = calloc(sizeof(schedule_data_t), sizeof(char));
+    if (sch != NULL) sch->time = (size_t)-1;
     return sch;
 }
 
-void delete_schedule(const schedule_data_t* schedule) {
+void delete_schedule(schedule_data_t* schedule) {
     free(schedule);
 }
 
@@ -164,10 +195,10 @@ void delete_schedule(const schedule_data_t* schedule) {
 
 
 
-void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block, period_t period, char* name) {
+void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t block, period_t period, const char* name) {
     char* sub = NULL;
     if (!(day < DAYS_OF_THE_WEEK && block < SCHEDULE_BLOCKS)) {
-        printf("Unexistent block day=%d block=%d", day, block);
+        printf("Unexistent block day=%zu block=%zu", day, block);
         abort();
     }
     if (period == PERIOD_FIRST)
@@ -175,13 +206,12 @@ void set_subjet_name_for_block(schedule_data_t* first_period, size_t day, size_t
     else if (period == PERIOD_SECOND)
         sub = first_period->second_period[day][block];
     else abort();
-    memset(sub, '\0', SUBJECT_NAME_MAX_LENGTH);
-    memcpy_s(sub, SUBJECT_NAME_MAX_LENGTH, name, strlen(name) + 1);
+    snprintf(sub, SUBJECT_NAME_MAX_LENGTH, "%s", name);
 }
 
-char* get_subjet_name_for_block(const schedule_data_t* first_period, size_t day, size_t block, period_t period) {
+const char* get_subjet_name_for_block(const schedule_data_t* first_period, size_t day, size_t block, period_t period) {
     if (!(day < DAYS_OF_THE_WEEK && block < SCHEDULE_BLOCKS)) {
-        printf("Unexistent block day=%d block=%d", day, block);
+        printf("Unexistent block day=%zu block=%zu", day, block);
         abort();
     }
     if (period == PERIOD_FIRST)
@@ -224,4 +254,8 @@ size_t get_schedule_day_count() {
 
 size_t get_schedule_block_count() {
     return SCHEDULE_BLOCKS;
+}
+
+size_t get_schedule_time(const schedule_data_t* schedule) {
+    return schedule->time;
 }

@@ -49,5 +49,6 @@ id_t get_subject_id_from_gene(const gene_t* gene);
 fmp_t get_fmp_from_gene(const gene_t* gene);
 
 size_t sizeof_gene();
+size_t sizeof_chromosome();
 
 #endif

@@ -19,10 +19,11 @@ void close_file(schedule_file_t file);
 void get_comissions(schedule_file_t file, size_t* o_comissionCount, com_id_t** o_comissionIds);
 schedule_data_t* get_schedule_for_comission(schedule_file_t file, com_id_t* comId);
 
-schedule_data_t* create_schedule(); // No deberia llamarse, usar get_schedule_for_comission sobre un doble puntero
-void delete_schedule(const schedule_data_t* schedule);
-void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, period_t period, char* name);
-char* get_subjet_name_for_block(const schedule_data_t* schedule, size_t day, size_t block, period_t period);
+schedule_data_t* create_schedule();
+void delete_schedule(schedule_data_t* schedule);
+void set_subjet_name_for_block(schedule_data_t* schedule, size_t day, size_t block, period_t period, const char* name);
+const char* get_subjet_name_for_block(const schedule_data_t* schedule, size_t day, size_t block, period_t period);
+size_t get_schedule_time(const schedule_data_t* schedule);
 void print_schedule(const schedule_data_t* schedule);
 
 size_t get_schedule_day_count();

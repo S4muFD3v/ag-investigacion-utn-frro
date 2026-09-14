@@ -65,6 +65,7 @@ schedule_t get_comission_schedule(comission_t* comission);
 void set_comission_schedule(comission_t* comission, schedule_t first_period);
 
 com_subjects_t* get_comission_subjects(comission_t* comission);
+/* La comision conserva el arreglo reservado en heap; terminate_db lo libera. */
 void set_comission_subjects(comission_t* comission, com_subjects_t* subjects);
 com_subjects_t* get_comission_subject_at(comission_t* comission, size_t position);
 

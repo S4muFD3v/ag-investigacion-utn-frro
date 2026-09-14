@@ -23,6 +23,9 @@ void init_db() {
 }
 
 void terminate_db() {
+    for (size_t i = 0; i < get_comission_count(); i++) {
+        free(get_comission_subjects(get_comission_at(i)));
+    }
     free_dynamic_array(dbdata.subjects);
     free_dynamic_array(dbdata.comissions);
     free_dynamic_array(dbdata.teachers);
