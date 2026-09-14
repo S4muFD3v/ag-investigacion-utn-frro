@@ -1,7 +1,7 @@
 #ifndef AG_FILE_H
 #define AG_FILE_H
 
-#include "ag.h"
+#include "../chromosome.h"
 
 void init(const char* fileName);
 void init_roll(size_t roll);

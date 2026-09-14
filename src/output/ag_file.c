@@ -1,4 +1,3 @@
-#include "defines.h"
 #include "ag_file.h"
 #include <stdio.h>
 #include <string.h>
@@ -67,11 +66,7 @@ void init_roll(size_t roll) {
 
 
 void write_chromosome(const chromosome_t* c, size_t id) {
-    printf("+");
-    char chomosomeStr[C_GENE_COUNT + 1];
-    strncpy(chomosomeStr, c->g, C_GENE_COUNT);
-    chomosomeStr[C_GENE_COUNT] = '\0';
-    fprintf(gf.populationDataFile, "%lu;%lu;%s;%.6f\n", gf.currentRoll, id, chomosomeStr, (float) c->fitness);
+    return;
 }
 
 
